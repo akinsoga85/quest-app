@@ -17,6 +17,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/seed.sql` | Zones, skills and a first day of quests |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
+| `packages/notify` | The evening drop (A10): who's due, Expo pushes, quiet hours |
 | `packages/payments` | Plus and payments (A9): RevenueCat and Stripe webhooks, Stripe Checkout and the manage page |
 | `packages/quests` | The quest writer agent (A6): curriculum, Claude writer with rule checks, weekly job |
 | `packages/safety` | The child-safety scan (A5): hash match, classifier, decision and server worker |
@@ -56,6 +57,19 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## The evening drop (A10)
+
+Every 10 minutes a schedule runs the `evening-drop` function. Each teen with
+notifications on gets one push a day at their drop time (8 pm local by
+default), saying what the day earned; it never arrives in quiet hours (9 pm to
+7 am, and under-18s can't shorten 22:00–06:00). Tapping it opens the drop
+screen, which is also in the You tab.
+
+To deploy: run `eas init` so the app has an EAS project id (push tokens need
+it), `npm run build:functions`, `supabase functions deploy evening-drop
+--no-verify-jwt`, set `DROP_WEBHOOK_SECRET`, and add a schedule that POSTs
+every 10 minutes with the header `x-drop-secret`.
 
 ## Plus and payments (A9)
 

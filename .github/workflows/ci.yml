@@ -21,7 +21,7 @@ jobs:
       - name: Parent page builds
         run: npm run build -w @quest/parent
       - name: Edge functions bundle and run
-        run: npm run build:functions && node scripts/check-coach-bundle.mjs && node scripts/check-scan-bundle.mjs && node scripts/check-writer-bundle.mjs && node scripts/check-payments-bundle.mjs
+        run: npm run build:functions && node scripts/check-coach-bundle.mjs && node scripts/check-scan-bundle.mjs && node scripts/check-writer-bundle.mjs && node scripts/check-payments-bundle.mjs && node scripts/check-drop-bundle.mjs
 
   database:
     name: Migrations and access rules

@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, useAccount } from "../src/lib/account";
+import { listenForDropTaps } from "../src/notify/push";
 import { UploadProvider } from "../src/capture/UploadProvider";
 import { TodayProvider } from "../src/today/TodayProvider";
 
@@ -52,6 +53,9 @@ function Routes() {
     if (step !== "loading") void SplashScreen.hideAsync();
   }, [step]);
 
+  // A tapped evening-drop push opens the drop screen (A10).
+  useEffect(() => (step === "done" ? listenForDropTaps() : undefined), [step]);
+
   if (step === "loading") return null;
 
   return (
@@ -80,6 +84,7 @@ function Routes() {
         <Stack.Screen name="review/[makeId]" options={{ presentation: "modal" }} />
         <Stack.Screen name="level-up" options={{ presentation: "modal" }} />
         <Stack.Screen name="send-family/[makeId]" options={{ presentation: "modal" }} />
+        <Stack.Screen name="drop" options={{ presentation: "modal" }} />
       </Stack.Protected>
     </Stack>
   );

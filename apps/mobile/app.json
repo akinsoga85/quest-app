@@ -55,6 +55,12 @@
           "cameraPermission": "Take the photo for your daily quest. The camera opens only when you tap it.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "drop"
+        }
       ]
     ]
   }
