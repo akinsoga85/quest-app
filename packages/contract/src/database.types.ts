@@ -199,6 +199,7 @@ export type Database = {
           coach_note: string | null
           coach_lesson_id: string | null
           review_started_at: string | null
+          scan_started_at: string | null
         }
         Insert: {
           id?: string
@@ -211,6 +212,7 @@ export type Database = {
           coach_note?: string | null
           coach_lesson_id?: string | null
           review_started_at?: string | null
+          scan_started_at?: string | null
         }
         Update: {
           id?: string
@@ -223,6 +225,7 @@ export type Database = {
           coach_note?: string | null
           coach_lesson_id?: string | null
           review_started_at?: string | null
+          scan_started_at?: string | null
         }
         Relationships: [
           {
@@ -541,6 +544,47 @@ export type Database = {
           },
         ]
       }
+      safety_queue: {
+        Row: {
+          id: string
+          make_id: string
+          source: Database["public"]["Enums"]["queue_source"]
+          result: Database["public"]["Enums"]["scan_result"]
+          reasons: string[]
+          created_at: string
+          resolved_at: string | null
+          resolution: string | null
+        }
+        Insert: {
+          id?: string
+          make_id: string
+          source: Database["public"]["Enums"]["queue_source"]
+          result: Database["public"]["Enums"]["scan_result"]
+          reasons?: string[]
+          created_at?: string
+          resolved_at?: string | null
+          resolution?: string | null
+        }
+        Update: {
+          id?: string
+          make_id?: string
+          source?: Database["public"]["Enums"]["queue_source"]
+          result?: Database["public"]["Enums"]["scan_result"]
+          reasons?: string[]
+          created_at?: string
+          resolved_at?: string | null
+          resolution?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_queue_make_id_fkey"
+            columns: ["make_id"]
+            isOneToOne: false
+            referencedRelation: "makes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_scans: {
         Row: {
           make_id: string
@@ -807,6 +851,18 @@ export type Database = {
         Args: { p_make_id: string; p_quest_id: string; p_captured_at: string }
         Returns: Json
       }
+      scan_claim: {
+        Args: { p_make_id: string }
+        Returns: Json
+      }
+      scan_pending: {
+        Args: { p_limit?: number }
+        Returns: string[]
+      }
+      scan_save: {
+        Args: { p_make_id: string; p_result: Database["public"]["Enums"]["scan_result"]; p_reasons: string[]; p_vendor: string }
+        Returns: string
+      }
       set_ai_coach_consent: {
         Args: { p_allow: boolean; p_teen_id?: string }
         Returns: undefined
@@ -825,6 +881,7 @@ export type Database = {
       link_status: "pending" | "active" | "revoked"
       make_status: "uploaded" | "scanning" | "blocked" | "held_for_review" | "reviewing" | "reviewed" | "retake" | "no_review"
       quest_status: "draft" | "approved" | "retired"
+      queue_source: "scan" | "coach"
       scan_result: "pass" | "block" | "human_review"
       zone_status: "live" | "coming" | "off"
     }

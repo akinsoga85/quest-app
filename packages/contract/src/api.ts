@@ -6,10 +6,12 @@ import { MakeStatus } from "./photo";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
-// Server functions. Each package builds its own functions against these shapes,
+// Server functions the app calls. Each package builds its own functions against these shapes,
 // and the app calls them only through these. `owner` is the build package
 // responsible. Functions with `rpc` are Postgres functions (supabase.rpc(name),
-// arguments prefixed p_); the rest are Supabase edge functions.
+// arguments prefixed p_); the rest are Supabase edge functions. Server-only
+// steps (the safety scan, A5, and the coach, A4) aren't here: the app never
+// calls them; the database starts them (see safety.ts and review.ts).
 export const Api = {
   "teen.create": {
     owner: "A1",
@@ -72,11 +74,6 @@ export const Api = {
     // offline count for the day it was taken (within MAKE_UPLOAD_WINDOW_HOURS).
     input: z.object({ makeId: z.uuid(), questId: z.uuid(), capturedAt: z.iso.datetime({ offset: true }) }),
     output: z.object({ makeId: z.uuid(), status: MakeStatus, localDay: z.iso.date() }),
-  },
-  "make.submit": {
-    owner: "A5",
-    input: z.object({ makeId: z.uuid() }),
-    output: z.object({ status: z.enum(["reviewing", "blocked", "held_for_review"]) }),
   },
   "review.forMake": {
     owner: "A4",

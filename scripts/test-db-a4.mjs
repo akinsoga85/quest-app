@@ -47,17 +47,23 @@ const REVIEW = {
   confidence: 0.86,
 };
 
-// A teen's make for today's photography quest, waiting for the coach (A5 passed it).
+// A teen's make for today's photography quest, waiting for the coach: the
+// safety scan (A5) has passed it.
 async function makeFor(teen, { status = "reviewing" } = {}) {
   await asAdmin();
   const quest = (await one(
     `select qs.quest_id from quest_schedule qs where qs.zone_id = 'photography' and qs.day = private.today_for($1)`,
     [teen],
   )).quest_id;
-  return (await one(
+  const id = (await one(
     `insert into makes (teen_id, quest_id, storage_path, status) values ($1::uuid, $2, $1::text || '/' || gen_random_uuid() || '.jpg', $3) returning id`,
-    [teen, quest, status],
+    [teen, quest, status === "reviewing" ? "scanning" : status],
   )).id;
+  if (status === "reviewing") {
+    await q("insert into safety_scans (make_id, result, vendor) values ($1, 'pass', 'test')", [id]);
+    await q("update makes set status = 'reviewing' where id = $1", [id]);
+  }
+  return id;
 }
 
 const claim = async (makeId) => CoachClaim.parse((await one("select coach_claim($1) as c", [makeId])).c);
