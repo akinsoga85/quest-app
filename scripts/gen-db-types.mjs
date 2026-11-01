@@ -54,6 +54,27 @@ const fks = (
     group by con.conname, rel.relname, frel.relname, con.conrelid, con.conkey
     order by con.conname`)
 ).rows;
+// Functions the app may call with supabase.rpc() (schema public only).
+const functions = (
+  await db.query(`
+    select p.proname as name, p.proretset as returns_set, p.prorettype::int as ret_oid,
+           p.pronargs as nargs, p.pronargdefaults as ndefaults,
+           coalesce(p.proargnames, '{}')::text[] as arg_names,
+           coalesce(p.proargmodes::text[], '{}')::text[] as arg_modes,
+           coalesce(p.proallargtypes, p.proargtypes::oid[])::int[] as arg_oids
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prokind = 'f'
+      and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+    order by p.proname`)
+).rows;
+const oids = [...new Set(functions.flatMap((f) => [f.ret_oid, ...f.arg_oids]))];
+const typeByOid = new Map(
+  (await db.query("select oid::int as oid, typname, typelem::int as elem from pg_type where oid = any($1::oid[])", [oids])).rows.map((t) => [t.oid, t]),
+);
+const elemNames = new Map(
+  (await db.query("select oid::int as oid, typname from pg_type where oid = any($1::oid[])", [[...typeByOid.values()].map((t) => t.elem).filter(Boolean)])).rows.map((t) => [t.oid, t.typname]),
+);
 await db.end();
 
 const base = (udt) => {
@@ -70,6 +91,34 @@ const base = (udt) => {
   }
 };
 const tsType = (c) => (c.data_type === "ARRAY" ? `${base(c.udt_name.slice(1))}[]` : base(c.udt_name));
+const oidType = (oid) => {
+  const t = typeByOid.get(oid);
+  if (!t) return "unknown";
+  if (t.elem) return `${base(elemNames.get(t.elem))}[]`;
+  return base(t.typname);
+};
+
+const functionTypes = functions.map((f) => {
+  const modes = f.arg_modes.length ? f.arg_modes : f.arg_oids.map(() => "i");
+  const inputs = [];
+  const outputs = [];
+  modes.forEach((m, i) => {
+    const arg = { name: f.arg_names[i] ?? `arg${i}`, type: oidType(f.arg_oids[i]) };
+    if (m === "i" || m === "b" || m === "v") inputs.push(arg);
+    if (m === "o" || m === "b" || m === "t") outputs.push(arg);
+  });
+  const firstDefault = f.nargs - f.ndefaults;
+  const args = inputs.map((a, i) => `${a.name}${i >= firstDefault ? "?" : ""}: ${a.type}`);
+  let returns;
+  if (outputs.length) {
+    const row = `{ ${outputs.map((o) => `${o.name}: ${o.type}`).join("; ")} }`;
+    returns = f.returns_set ? `${row}[]` : row;
+  } else {
+    const t = typeByOid.get(f.ret_oid)?.typname;
+    returns = t === "void" ? "undefined" : f.returns_set ? `${oidType(f.ret_oid)}[]` : oidType(f.ret_oid);
+  }
+  return { name: f.name, args, returns };
+});
 
 const byTable = new Map();
 for (const c of columns) {
@@ -127,7 +176,18 @@ lines.push(`${ind(2)}}`);
 lines.push(`${ind(2)}Views: {`);
 for (const [name, t] of byTable) if (t.type === "VIEW") emitRelation(name, t, true);
 lines.push(`${ind(2)}}`);
-lines.push(`${ind(2)}Functions: { [_ in never]: never }`);
+if (functionTypes.length) {
+  lines.push(`${ind(2)}Functions: {`);
+  for (const f of functionTypes) {
+    lines.push(`${ind(3)}${f.name}: {`);
+    lines.push(`${ind(4)}Args: ${f.args.length ? `{ ${f.args.join("; ")} }` : "Record<PropertyKey, never>"}`);
+    lines.push(`${ind(4)}Returns: ${f.returns}`);
+    lines.push(`${ind(3)}}`);
+  }
+  lines.push(`${ind(2)}}`);
+} else {
+  lines.push(`${ind(2)}Functions: { [_ in never]: never }`);
+}
 lines.push(`${ind(2)}Enums: {`);
 for (const e of enums) lines.push(`${ind(3)}${e.name}: ${e.labels.map((l) => `"${l}"`).join(" | ")}`);
 lines.push(`${ind(2)}}`);

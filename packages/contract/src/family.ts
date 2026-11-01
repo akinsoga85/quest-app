@@ -17,3 +17,9 @@ export type ParentLinkStatus = z.infer<typeof ParentLinkStatus>;
 
 // Parent invite links expire after 7 days (A1 done-when).
 export const PARENT_LINK_TTL_DAYS = 7;
+
+// The link a teen sends to a parent. It opens the parent consent page (H24, A8).
+// Built by hand: React Native's URL class doesn't support every method.
+export function parentInviteUrl(parentSiteUrl: string, token: string): string {
+  return `${parentSiteUrl.replace(/\/+$/, "")}/consent?t=${encodeURIComponent(token)}`;
+}

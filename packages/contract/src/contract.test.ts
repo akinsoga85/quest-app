@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   Api,
+  ageFromBirthMonth,
+  bracketFromAgeRange,
+  parentInviteUrl,
   CoachReview,
   bracketForAge,
   coachReviewJsonSchema,
@@ -136,5 +139,77 @@ describe("api", () => {
   it("validates a review response", () => {
     const out = Api["review.forMake"].output.parse({ state: "pending" });
     expect(out.state).toBe("pending");
+  });
+});
+
+describe("A1 done-when: ages 12, 14, 16, 18 and 19 in Canada and the US", () => {
+  const cases = [
+    { age: 12, bracket: "under_13" },
+    { age: 14, bracket: "13_15" },
+    { age: 16, bracket: "16_17" },
+    { age: 18, bracket: "18_19" },
+    { age: 19, bracket: "18_19" },
+  ] as const;
+
+  for (const country of ["CA", "US"]) {
+    for (const { age, bracket } of cases) {
+      it(`${country}, age ${age}`, () => {
+        expect(bracketForAge(age)).toBe(bracket);
+        if (bracket === "under_13") return; // stopped: no account, nothing kept
+        expect(needsParentConsent(bracket)).toBe(age < 18);
+        // Lean V1: everyone in Studio.
+        expect(modeFor({ country, bracket, wallsLive: false })).toBe("studio");
+        // With walls: only Canadian 13–15s stay in Studio.
+        expect(modeFor({ country, bracket, wallsLive: true })).toBe(country === "CA" && age < 16 ? "studio" : "walls");
+      });
+    }
+  }
+});
+
+describe("birth month and year", () => {
+  const today = new Date(Date.UTC(2026, 10, 1)); // 1 Nov 2026
+
+  it("counts a birthday later this year or this month as not yet reached", () => {
+    expect(ageFromBirthMonth(2013, 12, today)).toBe(12);
+    expect(ageFromBirthMonth(2013, 11, today)).toBe(12); // same month: day unknown, take the younger age
+    expect(ageFromBirthMonth(2013, 10, today)).toBe(13);
+    expect(ageFromBirthMonth(2007, 1, today)).toBe(19);
+    expect(ageFromBirthMonth(2006, 10, today)).toBe(20);
+  });
+
+  it("stops a child who turns 13 later this month", () => {
+    expect(bracketForAge(ageFromBirthMonth(2013, 11, today))).toBe("under_13");
+  });
+});
+
+describe("store age ranges (thresholds 13, 16, 18)", () => {
+  it("maps the ranges each store reports", () => {
+    expect(bracketFromAgeRange(null, 12)).toBe("under_13");
+    expect(bracketFromAgeRange(0, 12)).toBe("under_13");
+    expect(bracketFromAgeRange(13, 15)).toBe("13_15");
+    expect(bracketFromAgeRange(16, 17)).toBe("16_17");
+    expect(bracketFromAgeRange(18, null)).toBe("adult_unbounded");
+    expect(bracketFromAgeRange(18, 19)).toBe("18_19");
+  });
+
+  it("takes the youngest bracket when a range spans two", () => {
+    expect(bracketFromAgeRange(13, 17)).toBe("13_15");
+    expect(bracketFromAgeRange(10, 14)).toBe("under_13");
+  });
+
+  it("treats an empty answer as unknown, so the app asks instead", () => {
+    expect(bracketFromAgeRange(null, null)).toBe("unknown");
+    expect(bracketFromAgeRange(null, 15)).toBe("unknown");
+  });
+});
+
+describe("parent invite", () => {
+  it("links to the consent page with the token", () => {
+    const token = "a".repeat(64);
+    expect(parentInviteUrl("https://parents.example.com", token)).toBe(`https://parents.example.com/consent?t=${token}`);
+  });
+
+  it("names a Postgres function for every A1 entry", () => {
+    for (const def of Object.values(Api)) if (def.owner === "A1") expect("rpc" in def && def.rpc).toMatch(/^[a-z_]+$/);
   });
 });
