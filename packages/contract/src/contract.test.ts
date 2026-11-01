@@ -41,6 +41,8 @@ import {
   weekStart,
   weeklyStreak,
   type QuestDraft,
+  type QuestWeekDraft,
+  weekRuleProblems,
 } from "./index";
 
 describe("age and mode", () => {
@@ -455,5 +457,43 @@ describe("A5: the safety decision", () => {
 
   it("isn't something the app can call", () => {
     expect(Object.keys(Api)).not.toContain("make.submit");
+  });
+});
+
+describe("A6: quest week rules", () => {
+  const skills = ["photography.light", "photography.colour", "photography.framing", "photography.story"];
+  const good: QuestWeekDraft = {
+    zone: "photography",
+    weekOf: "2026-11-09", // a Monday
+    quests: skills.concat(skills.slice(0, 3)).map((trainsSkill, i) => ({
+      zone: "photography" as const,
+      title: `Window light ${i + 1}`,
+      brief: "Find one thing at home and photograph it in window light from a low angle.",
+      minutes: 10,
+      trainsSkill,
+      tips: [],
+    })),
+  };
+
+  it("passes a good week", () => {
+    expect(weekRuleProblems(good)).toEqual([]);
+  });
+
+  it("needs every skill trained, no repeats, and a Monday start", () => {
+    const allLight = { ...good, quests: good.quests.map((q) => ({ ...q, trainsSkill: "photography.light" })) };
+    expect(weekRuleProblems(allLight).join("|")).toMatch(/no quest this week trains photography.colour/);
+    const twice = { ...good, quests: good.quests.map((q, i) => (i === 1 ? { ...q, title: good.quests[0]!.title } : q)) };
+    expect(weekRuleProblems(twice).join("|")).toMatch(/appears twice/);
+    expect(weekRuleProblems(good, ["window light 3"]).join("|")).toMatch(/ran in a recent week/);
+    expect(weekRuleProblems({ ...good, weekOf: "2026-11-10" }).join("|")).toMatch(/Monday/);
+    expect(weekRuleProblems({ ...good, quests: good.quests.slice(0, 6) }).length).toBeGreaterThan(0);
+  });
+
+  it("refuses quests that send teens somewhere or to something unsafe", () => {
+    const risky = (brief: string) => questRuleProblems({ ...good.quests[0]!, brief });
+    expect(risky("Climb onto the roof and shoot the sunset over the street below.").join("|")).toMatch(/unsafe/);
+    expect(risky("Light a candle in a dark room and photograph the flame up close.").join("|")).toMatch(/unsafe/);
+    expect(risky("Ask a stranger at the bus stop if you can photograph their bag.").join("|")).toMatch(/unsafe/);
+    expect(risky("Photograph a shadow on your bedroom wall in the morning light.")).toEqual([]);
   });
 });
