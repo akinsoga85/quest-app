@@ -4,6 +4,7 @@ import { ActivityIndicator } from "react-native";
 import { colors } from "@quest/tokens";
 import { useAccount } from "../../src/lib/account";
 import { supabaseConfigured } from "../../src/lib/supabase";
+import { useUploads } from "../../src/capture/UploadProvider";
 import { TodayView } from "../../src/today/TodayView";
 import { useToday } from "../../src/today/TodayProvider";
 import { Button } from "../../src/ui/Button";
@@ -17,6 +18,7 @@ const openQuest = (questId: string) => router.push({ pathname: "/make", params: 
 export default function TodayScreen() {
   const { teen } = useAccount();
   const { today, loading, error, refresh } = useToday();
+  const uploads = useUploads();
 
   useFocusEffect(
     useCallback(() => {
@@ -54,5 +56,15 @@ export default function TodayScreen() {
     );
   }
 
-  return <TodayView today={today} studio={teen?.mode === "studio"} error={error} onOpen={openQuest} />;
+  return (
+    <TodayView
+      today={today}
+      studio={teen?.mode === "studio"}
+      error={error}
+      saving={uploads.pending}
+      onOpen={openQuest}
+      onRetry={uploads.retry}
+      onDiscard={(id) => void uploads.discard(id)}
+    />
+  );
 }
