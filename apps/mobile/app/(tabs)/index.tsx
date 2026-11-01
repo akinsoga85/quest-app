@@ -5,6 +5,7 @@ import { colors } from "@quest/tokens";
 import { useAccount } from "../../src/lib/account";
 import { supabaseConfigured } from "../../src/lib/supabase";
 import { useUploads } from "../../src/capture/UploadProvider";
+import { showLevelUpIfAny } from "../../src/studio/levelUp";
 import { TodayView } from "../../src/today/TodayView";
 import { useToday } from "../../src/today/TodayProvider";
 import { Button } from "../../src/ui/Button";
@@ -23,6 +24,7 @@ export default function TodayScreen() {
   useFocusEffect(
     useCallback(() => {
       void refresh();
+      void showLevelUpIfAny();
     }, [refresh]),
   );
 

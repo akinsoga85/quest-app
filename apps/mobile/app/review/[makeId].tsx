@@ -1,9 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Alert } from "react-native";
+import { supabase } from "../../src/lib/supabase";
 import { useCallback, useEffect } from "react";
 import { useUploads } from "../../src/capture/UploadProvider";
 import { useAccount } from "../../src/lib/account";
 import { ReviewView } from "../../src/review/ReviewView";
 import { useReview } from "../../src/review/useReview";
+import { showLevelUpIfAny } from "../../src/studio/levelUp";
 import { findQuest } from "../../src/today/logic";
 import { useToday } from "../../src/today/TodayProvider";
 
@@ -29,7 +32,10 @@ export default function ReviewScreen() {
 
   // A finished review changes points and levels on Today.
   useEffect(() => {
-    if (state?.state === "ready") void refreshToday();
+    if (state?.state === "ready") {
+      void refreshToday();
+      void showLevelUpIfAny();
+    }
   }, [state?.state, refreshToday]);
 
   return (
@@ -46,6 +52,22 @@ export default function ReviewScreen() {
       onTurnOnCoach={() => router.push("/ai-consent")}
       onDone={() => router.back()}
       onRetry={retry}
+      onDelete={() =>
+        Alert.alert("Delete this make?", "The photo and its review are deleted, and its points come off your level. Postcards stay.", [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              const { data: path, error: delError } = await supabase.rpc("delete_make", { p_make_id: makeId });
+              if (delError || typeof path !== "string") return Alert.alert("Couldn't delete it", "Check your connection and try again.");
+              await supabase.storage.from("makes").remove([path]);
+              void refreshToday();
+              router.back();
+            },
+          },
+        ])
+      }
     />
   );
 }
