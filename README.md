@@ -26,6 +26,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/functions` | Edge functions bundled from the packages by `npm run build:functions` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
 | `docs/operations.md` | How staff run things: the safety queue, quest weeks, the coach spot check, deletions |
+| `docs/store-release.md` | Store release (A12): accounts, internal testing, listing, privacy labels, age ratings, release checklist |
 
 ## Run it
 
@@ -60,6 +61,14 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## Store release (A12)
+
+`apps/mobile/eas.json` has three build profiles (development, preview,
+production; build numbers count up on EAS) and submits to TestFlight and Play's
+internal testing track. Everything else, from the accounts you need to the
+privacy labels, is in `docs/store-release.md`. One decision is open there:
+how Plus is sold on iOS.
 
 ## Admin and operations (A11)
 
@@ -108,8 +117,8 @@ What you need to set up (needs your accounts):
 2. **RevenueCat**: the app's App Store and Google Play subscriptions, and a
    webhook to the same URL with an authorization header
    (`REVENUECAT_WEBHOOK_SECRET`). The app logs in to RevenueCat with the teen's
-   id. The in-app purchase screen itself (react-native-purchases) is still to
-   add with the store release (A12).
+   id. The in-app purchase screen itself (react-native-purchases) waits on the
+   Plus-on-iOS decision in `docs/store-release.md` (section 6).
 3. `npm run build:functions`, `supabase functions deploy payments --no-verify-jwt`,
    and the secrets listed in `supabase/functions/payments/index.ts`.
 

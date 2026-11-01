@@ -107,10 +107,9 @@ export default function You() {
 
       <SettingsSection title="Your studio">
         <SettingsRow first label="Zones" value={zones.map((z) => ZONES[z].name).join(", ") || "Pick some"} onPress={() => router.push("/edit-zones")} />
-        <SettingsRow
-          label="Plus"
-          value={plus?.active ? `On${plus.until ? ` until ${shortDate(plus.until)}` : ""}` : plus?.canBuyInApp ? "Coming soon" : "Ask a parent"}
-        />
+        {/* Plus shows only once it's on: the app never points to buying it
+            elsewhere (App Store 3.1.1; see docs/store-release.md). */}
+        {plus?.active ? <SettingsRow label="Plus" value={`On${plus.until ? ` until ${shortDate(plus.until)}` : ""}`} /> : null}
       </SettingsSection>
 
       <SettingsSection title="Notifications">
