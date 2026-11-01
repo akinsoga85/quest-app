@@ -7,6 +7,7 @@ export * from "./lessons";
 export * from "./safety";
 export * from "./plus";
 export * from "./notifications";
+export * from "./admin";
 export * from "./review";
 export * from "./levels";
 export * from "./family";

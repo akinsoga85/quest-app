@@ -203,11 +203,13 @@ scenario("progress view shows a teen only their own points", async () => {
 });
 
 scenario("account deletion removes the teen's data but keeps the request record", async () => {
+  // Requests go through request_account_deletion (A11); the app can't insert them.
   await as(A);
-  await q("insert into deletion_requests (user_id) values ($1)", [A]);
-  await rejects("insert into deletion_requests (user_id) values ($1)", [B], /row-level security/);
+  await q("select request_account_deletion()");
+  await rejects("insert into deletion_requests (user_id) values ($1)", [B], /permission denied/);
+  await as(null, "service_role");
+  await q("select complete_deletion($1)", [A]);
   await asAdmin();
-  await q("delete from auth.users where id = $1", [A]);
   assert.equal(await count("select count(*) n from teens where id = $1", [A]), 0);
   assert.equal(await count("select count(*) n from makes where teen_id = $1", [A]), 0);
   assert.equal(await count("select count(*) n from reviews where teen_id = $1", [A]), 0);

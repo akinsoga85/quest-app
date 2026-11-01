@@ -17,6 +17,8 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   CoachClaim,
+  DELETION_DAYS,
+  SafetyResolution,
   dropDue,
   dropMessage,
   inQuietHours,
@@ -607,5 +609,23 @@ describe("A10: quiet hours and the drop", () => {
     expect(dropMessage({ pointsToday: 0, cheersToday: 0, madeToday: false }).body).toMatch(/still time/);
     expect(Api["push.register"].input.safeParse({ token: "ExponentPushToken[abc]", platform: "ios" }).success).toBe(true);
     expect(Api["push.register"].input.safeParse({ token: "abc", platform: "ios" }).success).toBe(false);
+  });
+});
+
+describe("A11: deletion, export and the admin site", () => {
+  it("deletes within the promised days", () => {
+    expect(DELETION_DAYS).toBe(30);
+    expect(Api["account.deletion"].output.parse(null)).toBeNull();
+  });
+
+  it("keeps grades on a 1–5 scale and resolutions to the four kinds", () => {
+    const g = { reviewId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", specific: 5, accurate: 4, kind: 5, actionable: 3, guardrailBreak: false, note: "" };
+    expect(Api["admin.grade"].input.safeParse(g).success).toBe(true);
+    expect(Api["admin.grade"].input.safeParse({ ...g, kind: 6 }).success).toBe(false);
+    expect(SafetyResolution.options).toEqual(["released", "kept_blocked", "reported", "removed"]);
+  });
+
+  it("names an owning package for every server function", () => {
+    for (const def of Object.values(Api)) expect(def.owner).toMatch(/^A(1[0-2]|[1-9])$/);
   });
 });
