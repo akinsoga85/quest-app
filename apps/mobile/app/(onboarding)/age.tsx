@@ -1,4 +1,4 @@
-import { ageFromBirthMonth, bracketForAge, type AgeBracket, type AgeSource } from "@quest/contract";
+import { ageFromBirthMonth, ageGroupEndsOn, bracketForAge, type AgeBracket, type AgeSource } from "@quest/contract";
 import { space } from "@quest/tokens";
 import { getLocales } from "expo-localization";
 import { router } from "expo-router";
@@ -42,7 +42,8 @@ export default function AgeCheck() {
     router.replace({ pathname: "/stop", params: { reason } });
   };
 
-  const createProfile = async (bracket: AgeBracket, source: AgeSource) => {
+  // `ageGroupEnds`: the month they move up, from a birth month and year (never the date itself).
+  const createProfile = async (bracket: AgeBracket, source: AgeSource, ageGroupEnds: string | null = null) => {
     const country = (getLocales()[0]?.regionCode ?? "ZZ").toUpperCase();
     const timezone = deviceTimeZone();
     const { error: rpcError } = await supabase.rpc("create_teen_profile", {
@@ -51,6 +52,7 @@ export default function AgeCheck() {
       p_country: country,
       p_region: "",
       p_timezone: timezone,
+      p_age_group_ends: ageGroupEnds ?? undefined,
     });
     if (rpcError) throw rpcError;
     await refresh(); // the layout moves on to the next step
@@ -93,7 +95,8 @@ export default function AgeCheck() {
       const check = bracketForAge(age);
       if (check === "under_13") await stop("under13");
       else if (check === "over_19") await stop("over19");
-      else await createProfile(check, storeAdult ? "store" : "self_declared");
+      else if (storeAdult) await createProfile(check, "store");
+      else await createProfile(check, "self_declared", ageGroupEndsOn(year, month, check));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
@@ -114,7 +117,7 @@ export default function AgeCheck() {
       }
     >
       <Text variant="body" color="text2">
-        We use the age range your phone's app store shares. If it isn't shared, pick your birth month and year. We only keep your age group.
+        We use the age range your phone's app store shares. If it isn't shared, pick your birth month and year. We keep your age group and the month it changes, never your birthday.
       </Text>
 
       {!storeAdult ? (

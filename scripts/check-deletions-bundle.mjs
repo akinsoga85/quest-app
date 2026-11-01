@@ -6,6 +6,7 @@ import { handleDeletionsRequest } from "../supabase/functions/account-deletions/
 const U = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
 let files = [`${U}/a.jpg`];
 const deps = {
+  advanceAgeGroups: async () => 0,
   due: async () => [{ userId: U, folder: U }],
   cancelBilling: async () => 0,
   listFolder: async () => files,
@@ -17,5 +18,5 @@ const post = (s) => new Request("https://x/account-deletions", { method: "POST",
 assert.equal((await handleDeletionsRequest(post("nope"), { DELETIONS_WEBHOOK_SECRET: "s" })).status, 403);
 assert.equal((await handleDeletionsRequest(post("s"), { DELETIONS_WEBHOOK_SECRET: "s" })).status, 503);
 const res = await handleDeletionsRequest(post("s"), { DELETIONS_WEBHOOK_SECRET: "s" }, deps);
-assert.deepEqual(await res.json(), { deleted: [U], photosRemoved: 1, subscriptionsCancelled: 0, failed: [] });
+assert.deepEqual(await res.json(), { ageGroupsMoved: 0, deleted: [U], photosRemoved: 1, subscriptionsCancelled: 0, failed: [] });
 console.log("deletions bundle ok");

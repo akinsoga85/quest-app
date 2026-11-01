@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// The account deletion job (A11), run daily. For each account past its 7 days:
+// The account deletion job (A11), run daily (with moving age groups on, see runDaily). For each account past its 7 days:
 // stop any web Plus, empty its photo folder, then delete the account (which
 // removes every row that hangs off it). Anything that fails is left for the
 // next run; deletions_due keeps returning it until it's done, well within
@@ -35,6 +35,17 @@ export async function emptyFolder(d: Pick<DeletionDeps, "listFolder" | "removeFi
     removed += paths.length;
   }
   throw new Error("folder didn't empty");
+}
+
+// The whole daily job: first teens whose age group has ended move up (free
+// Plus stops at 16, a parent's consent at 18), then due deletions.
+export interface DailyDeps extends DeletionDeps {
+  advanceAgeGroups: (now: Date) => Promise<number>;
+}
+
+export async function runDaily(d: DailyDeps): Promise<DeletionRun & { ageGroupsMoved: number }> {
+  const ageGroupsMoved = await d.advanceAgeGroups(d.now());
+  return { ageGroupsMoved, ...(await runDeletions(d)) };
 }
 
 export async function runDeletions(d: DeletionDeps): Promise<DeletionRun> {

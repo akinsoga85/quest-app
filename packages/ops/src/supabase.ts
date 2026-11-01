@@ -1,8 +1,8 @@
 import { cancelSubscriptionsFor } from "@quest/payments";
 import { createClient } from "@supabase/supabase-js";
-import { DueDeletion, runDeletions, type DeletionDeps } from "./deletions";
+import { DueDeletion, runDaily, type DailyDeps } from "./deletions";
 
-export function deletionDepsFromEnv(env: Record<string, string | undefined>): DeletionDeps {
+export function deletionDepsFromEnv(env: Record<string, string | undefined>): DailyDeps {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
   const sb = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const rpc = async (fn: string, args: Record<string, unknown>) => {
@@ -12,6 +12,7 @@ export function deletionDepsFromEnv(env: Record<string, string | undefined>): De
   };
   const stripeKey = env.STRIPE_SECRET_KEY;
   return {
+    advanceAgeGroups: async (now) => (await rpc("advance_age_groups", { p_today: now.toISOString().slice(0, 10) })) as number,
     due: async (now) => DueDeletion.array().parse(await rpc("deletions_due", { p_now: now.toISOString() })),
     // Without a Stripe key nobody could have bought Plus on the web.
     cancelBilling: (userId) => (stripeKey ? cancelSubscriptionsFor(fetch, stripeKey, userId) : Promise.resolve(0)),
@@ -32,7 +33,7 @@ export function deletionDepsFromEnv(env: Record<string, string | undefined>): De
 }
 
 // The edge function's handler (supabase/functions/account-deletions), run daily.
-export async function handleDeletionsRequest(req: Request, env: Record<string, string | undefined>, deps?: DeletionDeps): Promise<Response> {
+export async function handleDeletionsRequest(req: Request, env: Record<string, string | undefined>, deps?: DailyDeps): Promise<Response> {
   const secret = env.DELETIONS_WEBHOOK_SECRET;
   if (!secret || req.headers.get("x-deletions-secret") !== secret) return new Response("forbidden", { status: 403 });
   let d = deps;
@@ -43,6 +44,6 @@ export async function handleDeletionsRequest(req: Request, env: Record<string, s
       return new Response(e instanceof Error ? e.message : "not configured", { status: 503 });
     }
   }
-  const run = await runDeletions(d);
+  const run = await runDaily(d);
   return Response.json(run, { status: run.failed.length ? 500 : 200 });
 }

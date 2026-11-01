@@ -107,13 +107,13 @@ and used for **app functionality** only.
 | Photos | The photos teens make for quests (location and camera data removed on the phone) | User Content → Photos or Videos | Photos and videos → Photos |
 | Other user content | Coach review ratings ("helpful"), family cheers | User Content → Other User Content | App activity → Other user-generated content |
 | Purchase history | Whether Plus is on, and until when | Purchases → Purchase History | Financial info → Purchase history |
-| Other | Age group (13–15, 16–17, 18–19), country, time zone | Other Data → Other Data Types | Personal info → Other info |
+| Other | Age group (13–15, 16–17, 18–19) and the month it changes, country, time zone | Other Data → Other Data Types | Personal info → Other info |
 
 The same list is in the iOS privacy manifest (`app.json` → `ios.privacyManifests`).
 
 - **Not collected:** location, contacts, browsing, search, health, diagnostics
   or crash data, advertising ID (blocked on Android), audio, name, birthday
-  (only the age group is kept), anything from other apps.
+  (only the age group and the month it changes are kept), anything from other apps.
 - **Google Play extra answers:** data is encrypted in transit: yes. Users can
   ask for deletion: yes, in the app and at `<parent site>/delete`. Data shared
   with third parties: no; the services below process data for us as service
@@ -158,13 +158,17 @@ what they entered (A1).
 - **Plus and in-app purchase (decided).** 13–15s get Plus free, so they're
   never sold anything. 16+ pay, and Plus is sold in the app (App Store and
   Google Play, through RevenueCat), as Apple asks for a subscription the app
-  unlocks (3.1.3(b)). 16–17s see "Start Plus" only once a parent is linked; a
-  parent can also buy it on the parent page. The app never points to buying
-  anywhere else. The Plus screen shows the store's price, the renewal terms,
-  "Restore purchases", and links to the terms of use and privacy policy, as
-  both stores require. Note that a parent only approves a 16–17's in-app
-  purchase if the family uses Ask to Buy (Apple) or purchase approvals
-  (Google); otherwise the parent link is the check.
+  unlocks (3.1.3(b)). A 16–17 taps "Ask my parent"; a linked parent says yes
+  or not now on the parent page, and only after a yes (valid 7 days) does the
+  app show "Start Plus". A parent can also buy it on the parent page. 18–19s
+  need nobody's yes. The app never points to buying anywhere else. The Plus
+  screen shows the store's price, the renewal terms, "Restore purchases", and
+  links to the terms of use and privacy policy, as both stores require.
+- **Age groups move up.** For teens who give a birth month and year, the
+  month their age group ends is kept (not the birth date, though together
+  with the group it shows the birth month and year); a daily job moves them
+  up then. Teens placed by their app store are asked the store again every
+  6 months. The privacy policy should say this.
 
 ## 7. Release checklist
 
@@ -198,5 +202,5 @@ what they entered (A1).
    `EXPO_PUBLIC_PRIVACY_URL` (they default to `/terms` and `/privacy` on the
    parent site, which don't exist yet).
 5. **Test** with an App Store sandbox tester and a Play license tester: buy,
-   cancel, restore on a second phone, and a 16–17 account before and after a
-   parent links. Plus should show in Settings within seconds of buying.
+   cancel, restore on a second phone, and a 16–17 account before a parent
+   links, after linking, and after the parent says yes. Plus should show in Settings within seconds of buying.

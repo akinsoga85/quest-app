@@ -3,16 +3,19 @@ import { shortDate } from "../settings/logic";
 
 // Plus in the app: the pure parts, tested in plus.test.ts.
 
-export type PlusView = "included" | "active" | "needs_parent" | "buy" | "none";
+export type PlusView = "included" | "active" | "buy" | "needs_parent" | "ask_parent" | "waiting" | "declined" | "none";
 
-// What the Plus screen (and the Settings row) should show.
+// What the Plus screen (and the Settings row) should show. 16–17s link a
+// parent, ask them, and buy once they say yes.
 export function plusView(s: PlusStatus | null): PlusView {
   if (!s) return "none";
   if (s.included) return "included";
   if (s.active) return "active";
   if (s.canBuyInApp) return "buy";
   if (s.needsParent) return "needs_parent";
-  return "none";
+  if (s.approval === "pending") return "waiting";
+  if (s.approval === "declined") return "declined";
+  return "ask_parent";
 }
 
 // The Settings row: null hides it.
@@ -22,8 +25,12 @@ export function plusRow(s: PlusStatus | null): { value: string; opens: boolean }
       return { value: "Included free", opens: true };
     case "active":
       return { value: `On${s?.until ? ` until ${shortDate(s.until)}` : ""}`, opens: true };
+    case "waiting":
+      return { value: "Waiting for a yes", opens: true };
     case "buy":
     case "needs_parent":
+    case "ask_parent":
+    case "declined":
       return { value: "Get Plus", opens: true };
     default:
       return null;

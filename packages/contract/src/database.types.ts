@@ -445,6 +445,48 @@ export type Database = {
         }
         Relationships: []
       }
+      plus_requests: {
+        Row: {
+          id: string
+          teen_id: string
+          status: string
+          requested_at: string
+          decided_at: string | null
+          decided_by: string | null
+        }
+        Insert: {
+          id?: string
+          teen_id: string
+          status?: string
+          requested_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+        }
+        Update: {
+          id?: string
+          teen_id?: string
+          status?: string
+          requested_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plus_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "parents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plus_requests_teen_id_fkey"
+            columns: ["teen_id"]
+            isOneToOne: false
+            referencedRelation: "teens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       postcards: {
         Row: {
           id: string
@@ -998,6 +1040,8 @@ export type Database = {
           timezone: string
           created_at: string
           age_source: Database["public"]["Enums"]["age_source"]
+          age_group_ends: string | null
+          age_checked_at: string
         }
         Insert: {
           id: string
@@ -1011,6 +1055,8 @@ export type Database = {
           timezone?: string
           created_at?: string
           age_source?: Database["public"]["Enums"]["age_source"]
+          age_group_ends?: string | null
+          age_checked_at?: string
         }
         Update: {
           id?: string
@@ -1024,6 +1070,8 @@ export type Database = {
           timezone?: string
           created_at?: string
           age_source?: Database["public"]["Enums"]["age_source"]
+          age_group_ends?: string | null
+          age_checked_at?: string
         }
         Relationships: []
       }
@@ -1096,6 +1144,10 @@ export type Database = {
         Args: { p_week_of: string }
         Returns: Json
       }
+      advance_age_groups: {
+        Args: { p_today?: string }
+        Returns: number
+      }
       apply_entitlement_event: {
         Args: { p_event_id: string; p_teen_id: string; p_source: Database["public"]["Enums"]["entitlement_source"]; p_kind: Database["public"]["Enums"]["entitlement_kind"]; p_active_until: string; p_sandbox: boolean }
         Returns: string
@@ -1140,13 +1192,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      confirm_age_group: {
+        Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"] }
+        Returns: Json
+      }
       create_parent_invite: {
         Args: Record<PropertyKey, never>
         Returns: { token: string; expires_at: string }[]
       }
       create_teen_profile: {
-        Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string }
+        Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string; p_age_group_ends?: string }
         Returns: { handle: string; mode: Database["public"]["Enums"]["app_mode"]; needs_parent: boolean }[]
+      }
+      decide_plus_request: {
+        Args: { p_request_id: string; p_approve: boolean }
+        Returns: Json
       }
       delete_make: {
         Args: { p_make_id: string }
@@ -1257,6 +1317,10 @@ export type Database = {
         Returns: undefined
       }
       request_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      request_plus: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseAuthCallback } from "../lib/authCallback";
 import { birthYearsFor, closedUntil, isClosed } from "./ageGate";
-import { interpretAndroidAccess, interpretRange, iosSupported } from "./ageSignalLogic";
+import { interpretAndroidAccess, interpretRange, iosSupported, recheckDue } from "./ageSignalLogic";
 import { onboardingStep, type OnboardingState } from "./flow";
 
 describe("store age signal", () => {
@@ -94,5 +94,14 @@ describe("browser sign-in callback", () => {
 
   it("returns none for a bare redirect", () => {
     expect(parseAuthCallback("quest://auth/callback")).toEqual({ kind: "none" });
+  });
+});
+
+describe("asking the store's age range again", () => {
+  it("is due every 6 months, only for teens the store placed", () => {
+    const checked = "2026-05-01T10:00:00Z";
+    expect(recheckDue("store", checked, new Date("2026-10-31T10:00:00Z"), 6)).toBe(false);
+    expect(recheckDue("store", checked, new Date("2026-11-01T10:00:00Z"), 6)).toBe(true);
+    expect(recheckDue("self_declared", checked, new Date("2030-01-01T00:00:00Z"), 6)).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyFolder, runDeletions, type DeletionDeps } from "./deletions";
+import { emptyFolder, runDaily, runDeletions, type DailyDeps } from "./deletions";
 import { handleDeletionsRequest } from "./supabase";
 
 const A = "00000000-0000-4000-8000-0000000000a1";
@@ -7,7 +7,8 @@ const B = "00000000-0000-4000-8000-0000000000b1";
 
 function fakes(files: Record<string, string[]>, opts: { billingFails?: string } = {}) {
   const log: string[] = [];
-  const deps: DeletionDeps = {
+  const deps: DailyDeps = {
+    advanceAgeGroups: async () => (log.push("age groups"), 2),
     due: async () => [
       { userId: A, folder: A },
       { userId: B, folder: B },
@@ -51,6 +52,13 @@ describe("the deletion job", () => {
     expect(log).not.toContain(`complete ${A}`);
   });
 
+  it("moves age groups on before any deletions", async () => {
+    const { deps, log } = fakes({ [A]: [], [B]: [] });
+    const run = await runDaily(deps);
+    expect(run.ageGroupsMoved).toBe(2);
+    expect(log[0]).toBe("age groups");
+  });
+
   it("never removes files outside the account's folder", async () => {
     await expect(emptyFolder({ listFolder: async () => ["other/1.jpg"], removeFiles: async () => undefined }, A)).rejects.toThrow(/outside/);
   });
@@ -63,6 +71,6 @@ describe("the deletion job", () => {
     const { deps } = fakes({ [A]: [], [B]: [] });
     const res = await handleDeletionsRequest(post("s"), { DELETIONS_WEBHOOK_SECRET: "s" }, deps);
     expect(res.status).toBe(200);
-    expect((await res.json()).deleted).toEqual([A, B]);
+    expect(await res.json()).toMatchObject({ ageGroupsMoved: 2, deleted: [A, B] });
   });
 });

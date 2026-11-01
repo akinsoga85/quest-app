@@ -4,8 +4,8 @@ import type { AgeBracket } from "./age";
 // Plus (A9). Prices are the plan's starting points, to test.
 //   13–15: Plus is included, free.
 //   16–17: a linked parent buys it on the parent page (Stripe), or the teen
-//          buys it in the app once a parent is linked (App Store or Google
-//          Play, through RevenueCat).
+//          buys it in the app (App Store or Google Play, through RevenueCat)
+//          once a linked parent has approved it.
 //   18–19: in the app, or on the parent page if a parent is linked.
 // Every purchase arrives as a webhook and becomes an EntitlementEvent; the
 // database applies each one once. The App Store asks that a subscription the
@@ -30,11 +30,17 @@ export function plusIncluded(bracket: AgeBracket): boolean {
   return bracket === "13_15";
 }
 
-// Who may buy in the app: 18–19s, and 16–17s once a parent is linked (so a
-// parent knows). 13–15s never need to.
-export function canBuyInApp(bracket: AgeBracket, parentLinked: boolean): boolean {
+// A 16–17 asks; a linked parent says yes or not now on the parent page. A yes
+// lasts this long, for one purchase.
+export const PLUS_APPROVAL_DAYS = 7;
+export const PlusApproval = z.enum(["none", "pending", "approved", "declined"]);
+export type PlusApproval = z.infer<typeof PlusApproval>;
+
+// Who may buy in the app: 18–19s, and 16–17s once a linked parent has
+// approved it. 13–15s never need to.
+export function canBuyInApp(bracket: AgeBracket, approval: PlusApproval): boolean {
   if (bracket === "18_19") return true;
-  if (bracket === "16_17") return parentLinked;
+  if (bracket === "16_17") return approval === "approved";
   return false;
 }
 
@@ -132,11 +138,19 @@ export const PlusStatus = z.object({
   source: EntitlementSource.nullable(),
   canBuyInApp: z.boolean(),
   needsParent: z.boolean(), // 16–17 with no parent linked yet
+  approval: PlusApproval, // 16–17s: where their request stands ("none" for everyone else)
 });
 export type PlusStatus = z.infer<typeof PlusStatus>;
 
 // parent.plus: Plus for each linked teen, on the parent page.
 export const ParentPlus = z.array(
-  z.object({ teenId: z.uuid(), active: z.boolean(), included: z.boolean(), until: z.string().nullable(), source: EntitlementSource.nullable() }),
+  z.object({
+    teenId: z.uuid(),
+    active: z.boolean(),
+    included: z.boolean(),
+    until: z.string().nullable(),
+    source: EntitlementSource.nullable(),
+    request: z.object({ id: z.uuid(), requestedAt: z.string() }).nullable(), // a 16–17 waiting for a yes
+  }),
 );
 export type ParentPlus = z.infer<typeof ParentPlus>;

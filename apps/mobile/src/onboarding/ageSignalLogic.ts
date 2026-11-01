@@ -34,3 +34,12 @@ export function interpretAndroidAccess(status: string | null | undefined): "ask_
   if (status === "VERIFICATION_REQUIRED") return { kind: "verification_required" };
   return { kind: "unavailable" };
 }
+
+// Store-placed teens are asked again every AGE_RECHECK_MONTHS, so the app
+// learns when the store moves them up (it never shares the birthday).
+export function recheckDue(ageSource: "store" | "self_declared", checkedAt: string, now: Date, months: number): boolean {
+  if (ageSource !== "store") return false;
+  const due = new Date(checkedAt);
+  due.setUTCMonth(due.getUTCMonth() + months);
+  return now >= due;
+}

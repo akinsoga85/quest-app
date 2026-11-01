@@ -102,8 +102,10 @@ every 10 minutes with the header `x-drop-secret`.
 ## Plus and payments (A9)
 
 13–15s get Plus free. 16+ pay: in the app (App Store or Google Play, through
-RevenueCat), where 16–17s see it only once a parent is linked, or a linked
-parent buys it on the parent page (Stripe). Every purchase, renewal,
+RevenueCat), where a 16–17 asks and a linked parent says yes on the parent
+page first, or a linked parent buys it on the parent page (Stripe). Teens move
+up an age group on the month stored at sign-up (or when their app store says
+so), so free Plus ends at 16. Every purchase, renewal,
 cancellation and refund arrives as a webhook at the `payments` function and is
 applied once.
 

@@ -125,14 +125,27 @@ scenario("each event counts once; billing issues wait; unknown teens are recorde
 });
 
 scenario("A9 done when: under-18 purchases need a parent's approval", async () => {
-  // A 16–17 with no parent linked can't buy in the app; once linked, they can.
+  // No parent linked: nothing to buy, and the app asks for a link first.
   await asAdmin();
   await q("update parent_links set status = 'revoked' where teen_id = $1", [T]);
   assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).needsParent], [false, true]);
+  await as(T);
+  await rejects("select request_plus()", [], /link a parent first/);
+  // Linked, but the parent hasn't said yes: still nothing to buy.
   await asAdmin();
   await q("update parent_links set status = 'active' where teen_id = $1", [T]);
-  assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).needsParent], [true, false]);
-  assert.equal((await plus(A)).canBuyInApp, true);
+  assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).approval], [false, "none"]);
+  // The teen asks; the parent sees it on the parent page and says yes.
+  await as(T);
+  assert.equal((await one("select request_plus() as r")).r.approval, "pending");
+  assert.equal((await one("select request_plus() as r")).r.approval, "pending", "asking twice is one request");
+  assert.equal((await plus(T)).canBuyInApp, false);
+  await as(P);
+  const req = Api["parent.plus"].output.parse((await one("select parent_plus() as p")).p)[0].request;
+  assert.ok(req, "the parent sees the request");
+  await q("select decide_plus_request($1, true)", [req.id]);
+  assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).approval], [true, "approved"]);
+  assert.equal((await plus(A)).canBuyInApp, true, "18–19s need nobody's yes");
   // The parent buys on the parent page and sees it there.
   await apply(stripe("customer.subscription.created", T, "active", 30));
   await as(P);
@@ -177,7 +190,12 @@ scenario("13–15s get Plus free, everywhere; 16+ pay", async () => {
   assert.equal((await one("select coach_claim($1) as c", [m])).c.context.plus, true);
 });
 
-scenario("a 16–17 buys Plus in the app once a parent is linked", async () => {
+scenario("a 16–17 buys Plus in the app once a parent says yes", async () => {
+  await as(T);
+  const r = (await one("select request_plus() as r")).r;
+  assert.equal(r.approval, "pending");
+  await asAdmin();
+  await q("update plus_requests set status = 'approved', decided_at = now(), decided_by = $1 where teen_id = $2", [P, T]);
   assert.equal((await plus(T)).canBuyInApp, true);
   assert.equal(await apply(rc("INITIAL_PURCHASE", T, "PLAY_STORE", 30)), "applied");
   const t = await plus(T);
@@ -186,6 +204,42 @@ scenario("a 16–17 buys Plus in the app once a parent is linked", async () => {
   // Cancelling in the store keeps Plus to the end of the month.
   await apply(rc("CANCELLATION", T, "PLAY_STORE", 30, { cancel_reason: "UNSUBSCRIBE" }));
   assert.equal((await plus(T)).active, true);
+  await as(T);
+  await rejects("select request_plus()", [], /already on/);
+});
+
+scenario("a parent can say not now; only a linked parent can answer; a yes lasts 7 days", async () => {
+  const O = "00000000-0000-4000-8000-0000000009b2"; // someone else's parent
+  await asAdmin();
+  await q("insert into auth.users (id) values ($1)", [O]);
+  await q("insert into parents (id, adult_check, adult_checked_at) values ($1, 'attested', now())", [O]);
+  await as(T);
+  await q("select request_plus()");
+  await asAdmin();
+  const id = (await one("select id from plus_requests where teen_id = $1", [T])).id;
+  await as(O);
+  await rejects("select decide_plus_request($1, true)", [id], /no such request/);
+  await as(A);
+  await rejects("select request_plus()", [], /only 16–17s/);
+  await as(P);
+  await q("select decide_plus_request($1, false)", [id]);
+  await rejects("select decide_plus_request($1, true)", [id], /already been answered/);
+  assert.deepEqual([(await plus(T)).approval, (await plus(T)).canBuyInApp], ["declined", false]);
+  await as(T);
+  await rejects("select request_plus()", [], /ask again tomorrow/);
+  // A day later they can ask again; an old yes runs out after 7 days.
+  await asAdmin();
+  await q("update plus_requests set requested_at = now() - interval '2 days', decided_at = now() - interval '2 days' where id = $1", [id]);
+  await as(T);
+  assert.equal((await one("select request_plus() as r")).r.approval, "pending");
+  await asAdmin();
+  await q("update plus_requests set status = 'approved', decided_at = now() - interval '8 days', requested_at = now() - interval '8 days' where teen_id = $1", [T]);
+  assert.deepEqual([(await plus(T)).approval, (await plus(T)).canBuyInApp], ["none", false]);
+  // Nobody reads the requests table directly.
+  for (const who of [T, P]) {
+    await as(who);
+    await rejects("select * from plus_requests", [], /permission denied/);
+  }
 });
 
 scenario("Plus perks: a second take on a quest, and deeper coaching", async () => {
