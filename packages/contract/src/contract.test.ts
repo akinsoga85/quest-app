@@ -15,6 +15,14 @@ import {
   questRuleProblems,
   reviewGuardrailIssues,
   skillIdsFor,
+  MAKING_DAYS_PER_WEEK,
+  ZONES,
+  addDays,
+  localDay,
+  skillName,
+  weekDays,
+  weekStart,
+  weeklyStreak,
   type QuestDraft,
 } from "./index";
 
@@ -211,5 +219,82 @@ describe("parent invite", () => {
 
   it("names a Postgres function for every A1 entry", () => {
     for (const def of Object.values(Api)) if (def.owner === "A1") expect("rpc" in def && def.rpc).toMatch(/^[a-z_]+$/);
+  });
+});
+
+describe("A2: local days, weeks and the gentle streak", () => {
+  it("finds the local day across midnight, daylight saving and half-hour zones", () => {
+    expect(localDay(new Date("2025-11-02T06:59:59Z"), "America/Los_Angeles")).toBe("2025-11-01");
+    expect(localDay(new Date("2025-11-02T07:00:00Z"), "America/Los_Angeles")).toBe("2025-11-02");
+    // Clocks went back at 2am that morning, so the next midnight is an hour later in UTC.
+    expect(localDay(new Date("2025-11-03T07:59:59Z"), "America/Los_Angeles")).toBe("2025-11-02");
+    expect(localDay(new Date("2025-11-03T08:00:00Z"), "America/Los_Angeles")).toBe("2025-11-03");
+    expect(localDay(new Date("2025-11-02T18:29:59Z"), "Asia/Kolkata")).toBe("2025-11-02");
+    expect(localDay(new Date("2025-11-02T18:30:00Z"), "Asia/Kolkata")).toBe("2025-11-03");
+    expect(localDay(new Date("2025-11-02T11:00:00Z"), "Pacific/Kiritimati")).toBe("2025-11-03");
+    expect(localDay(new Date("2025-11-02T11:00:00Z"), "Pacific/Pago_Pago")).toBe("2025-11-02");
+  });
+
+  it("adds days and starts weeks on Monday", () => {
+    expect(addDays("2025-12-31", 1)).toBe("2026-01-01");
+    expect(addDays("2024-03-01", -1)).toBe("2024-02-29");
+    expect(weekStart("2025-11-03")).toBe("2025-11-03"); // Monday
+    expect(weekStart("2025-11-09")).toBe("2025-11-03"); // Sunday
+    expect(weekStart("2026-01-01")).toBe("2025-12-29"); // across a year
+    expect(weekDays("2025-11-05")).toEqual(["2025-11-03", "2025-11-04", "2025-11-05", "2025-11-06", "2025-11-07", "2025-11-08", "2025-11-09"]);
+    expect(() => addDays("Nov 3", 1)).toThrow();
+  });
+
+  it("counts weeks with 3 or more making days", () => {
+    const wk1 = ["2025-10-06", "2025-10-08", "2025-10-12"];
+    const wk2 = ["2025-10-13", "2025-10-14", "2025-10-14", "2025-10-16"];
+    expect(MAKING_DAYS_PER_WEEK).toBe(3);
+    expect(weeklyStreak([], "2025-10-20")).toBe(0);
+    expect(weeklyStreak(wk1, "2025-10-12")).toBe(1);
+    expect(weeklyStreak([...wk1, ...wk2], "2025-10-19")).toBe(2);
+    // An unfinished week never breaks it; a finished one with 2 days does.
+    expect(weeklyStreak([...wk1, ...wk2], "2025-10-26")).toBe(2);
+    expect(weeklyStreak([...wk1, ...wk2, "2025-10-21", "2025-10-23"], "2025-10-27")).toBe(0);
+    // Two makes on one day count once.
+    expect(weeklyStreak(["2025-10-13", "2025-10-13", "2025-10-14"], "2025-10-19")).toBe(0);
+    // Days after today are ignored.
+    expect(weeklyStreak([...wk1, "2025-10-13", "2025-10-14", "2025-10-15"], "2025-10-14")).toBe(1);
+  });
+
+  it("validates the Today payload", () => {
+    const today = {
+      day: "2025-11-05",
+      timezone: "Pacific/Auckland",
+      zones: [
+        {
+          zone: "photography",
+          points: 12,
+          madeToday: false,
+          quest: {
+            id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11",
+            zone: "photography",
+            title: "Shadows that tell a story",
+            brief: "Find hard light and photograph the shadow, not the thing.",
+            minutes: 15,
+            trainsSkill: "photography.light",
+            tips: ["Side light makes longer shadows"],
+          },
+        },
+        { zone: "fashion", points: 0, madeToday: false, quest: null },
+      ],
+      week: { start: "2025-11-03", madeDays: ["2025-11-03"] },
+      streakWeeks: 6,
+    };
+    expect(Api["today.get"].output.parse(today)).toEqual(today);
+    expect(() => Api["today.get"].output.parse({ ...today, zones: [...today.zones, ...today.zones] })).toThrow();
+    expect(Api["zones.set"].input.safeParse({ zones: [] }).success).toBe(false);
+    expect(Api["zones.set"].input.safeParse({ zones: ["photography", "fashion", "art_crafts", "music"] }).success).toBe(false);
+    expect(Api["zones.set"].input.safeParse({ zones: ["photography"] }).success).toBe(true);
+  });
+
+  it("names skills and describes zones for the picker", () => {
+    expect(skillName("photography.light")).toBe("Light");
+    expect(skillName("words.word_choice")).toBe("Word choice");
+    for (const z of Object.values(ZONES)) expect(z.blurb.length).toBeGreaterThan(5);
   });
 });

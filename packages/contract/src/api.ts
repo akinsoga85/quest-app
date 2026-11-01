@@ -2,6 +2,8 @@ import { z } from "zod";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { CoachReview } from "./review";
 import { Cheer } from "./family";
+import { Today } from "./today";
+import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
 // Server functions. Each package builds its own functions against these shapes,
 // and the app calls them only through these. `owner` is the build package
@@ -45,6 +47,20 @@ export const Api = {
     // A teen can switch coach reviews on or off; a linked parent can only switch them off.
     input: z.object({ allow: z.boolean(), teenId: z.uuid().nullable() }),
     output: z.object({ ok: z.literal(true) }),
+  },
+  "zones.set": {
+    owner: "A2",
+    rpc: "set_teen_zones",
+    // Replaces the teen's zones. Progress in a dropped zone is kept for when they come back.
+    input: z.object({ zones: z.array(ZoneId).min(1).max(MAX_ZONES_PER_TEEN) }),
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "today.get": {
+    owner: "A2",
+    rpc: "get_today",
+    // Today's quests in the teen's zones, by their local day, plus this week and the streak.
+    input: z.object({}),
+    output: Today,
   },
   "make.createUpload": {
     owner: "A3",

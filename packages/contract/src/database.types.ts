@@ -166,6 +166,7 @@ export type Database = {
           storage_path: string
           status: Database["public"]["Enums"]["make_status"]
           created_at: string
+          local_day: string
         }
         Insert: {
           id?: string
@@ -174,6 +175,7 @@ export type Database = {
           storage_path: string
           status?: Database["public"]["Enums"]["make_status"]
           created_at?: string
+          local_day?: string
         }
         Update: {
           id?: string
@@ -182,6 +184,7 @@ export type Database = {
           storage_path?: string
           status?: Database["public"]["Enums"]["make_status"]
           created_at?: string
+          local_day?: string
         }
         Relationships: [
           {
@@ -734,8 +737,16 @@ export type Database = {
         Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string }
         Returns: { handle: string; mode: Database["public"]["Enums"]["app_mode"]; needs_parent: boolean }[]
       }
+      get_today: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       set_ai_coach_consent: {
         Args: { p_allow: boolean; p_teen_id?: string }
+        Returns: undefined
+      }
+      set_teen_zones: {
+        Args: { p_zones: string[] }
         Returns: undefined
       }
     }
