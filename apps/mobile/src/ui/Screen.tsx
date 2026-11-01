@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "./Text";
 
 type ScreenProps = {
-  title: string;
+  title: string; // "" when the header says it all (H16)
   eyebrow?: string;
   dateline?: string; // a small line above the title, as written (H15's "Friday, Oct 23")
   aside?: React.ReactNode; // beside the title, e.g. the streak pill
@@ -28,9 +28,11 @@ export function Screen({ title, eyebrow, dateline, aside, header, titleSize = "s
           {dateline}
         </Text>
       ) : null}
-      <Text variant={titleSize} accessibilityRole="header">
-        {title}
-      </Text>
+      {title ? (
+        <Text variant={titleSize} accessibilityRole="header">
+          {title}
+        </Text>
+      ) : null}
     </View>
   );
   return (

@@ -5,6 +5,7 @@ import Svg, { Rect } from "react-native-svg";
 import { Button } from "../ui/Button";
 import { AlertIcon, ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, LockIcon } from "../ui/icons";
 import { Text } from "../ui/Text";
+import { makeStatusLabel } from "../review/logic";
 import {
   questMeta,
   streakAccessibilityLabel,
@@ -97,7 +98,12 @@ export function QuestCard({ zone, quest, onStart }: { zone: TodayZone; quest: To
         <Text variant="body" color="text2">
           {quest.brief}
         </Text>
-        <Button label="Start quest" onPress={onStart} />
+        {zone.make?.status === "retake" ? (
+          <Text variant="bodySmall" color="lime">
+            Your coach asked for another photo. Tap to see why, or just retake it.
+          </Text>
+        ) : null}
+        <Button label={zone.make?.status === "retake" ? "Retake" : "Start quest"} onPress={onStart} />
       </View>
     </View>
   );
@@ -111,12 +117,31 @@ export interface RowSaving {
 }
 
 // A smaller row for the other zones: to do, saving, done today, or not ready yet.
-export function QuestRow({ zone, onOpen, saving }: { zone: TodayZone; onOpen: (quest: TodayQuest) => void; saving?: RowSaving }) {
+export function QuestRow({
+  zone,
+  onOpen,
+  onReview,
+  saving,
+}: {
+  zone: TodayZone;
+  onOpen: (quest: TodayQuest) => void;
+  onReview?: (makeId: string) => void;
+  saving?: RowSaving;
+}) {
   const { quest } = zone;
   const name = ZONES[zone.zone].name;
   const open = quest !== null && !zone.madeToday && !saving;
   const title = quest ? quest.title : `Today's ${name} quest is on its way`;
-  const status = zone.madeToday ? "Done today" : saving ? saving.label : quest ? `About ${quest.minutes} minutes` : "Check back soon";
+  const made = zone.madeToday && zone.make ? zone.make : null;
+  const status = made
+    ? (makeStatusLabel(made.status) ?? "Done today")
+    : zone.madeToday
+      ? "Done today"
+      : saving
+        ? saving.label
+        : quest
+          ? `About ${quest.minutes} minutes`
+          : "Check back soon";
   const target = minTouch(Platform.OS);
 
   const badge = zone.madeToday ? (
@@ -166,6 +191,19 @@ export function QuestRow({ zone, onOpen, saving }: { zone: TodayZone; onOpen: (q
           </View>
         </View>
       </View>
+    );
+  }
+  if (made && onReview) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${name}: ${title}. ${status}.`}
+        accessibilityHint="Opens your coach review"
+        onPress={() => onReview(made.id)}
+        style={({ pressed }) => [styles.row, { opacity: pressed ? 0.85 : 1 }]}
+      >
+        {content}
+      </Pressable>
     );
   }
   if (!open || !quest) {

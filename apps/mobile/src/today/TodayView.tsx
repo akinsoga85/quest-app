@@ -12,12 +12,13 @@ interface Props {
   error?: string | null;
   saving?: PendingMake[]; // photos on their way to the server (A3)
   onOpen: (questId: string) => void;
+  onReview?: (makeId: string) => void;
   onRetry?: () => void;
   onDiscard?: (makeId: string) => void;
 }
 
 // H15 (Studio) / H5, drawn from a Today payload.
-export function TodayView({ today, studio, error, saving = [], onOpen, onRetry = () => undefined, onDiscard = () => undefined }: Props) {
+export function TodayView({ today, studio, error, saving = [], onOpen, onReview, onRetry = () => undefined, onDiscard = () => undefined }: Props) {
   const savingIds = new Set(saving.map((p) => p.questId));
   const { main, rest } = splitZones(today.zones, savingIds);
   const allDone = today.zones.length > 0 && today.zones.every((z) => z.madeToday || (z.quest && savingIds.has(z.quest.id)));
@@ -37,7 +38,7 @@ export function TodayView({ today, studio, error, saving = [], onOpen, onRetry =
       {main?.quest ? <QuestCard zone={main} quest={main.quest} onStart={() => onOpen(main.quest!.id)} /> : null}
       {!main && allDone ? <AllDoneCard /> : null}
       {rest.map((z) => (
-        <QuestRow key={z.zone} zone={z} onOpen={(q) => onOpen(q.id)} saving={z.madeToday ? undefined : rowSaving(z.quest?.id)} />
+        <QuestRow key={z.zone} zone={z} onOpen={(q) => onOpen(q.id)} onReview={onReview} saving={z.madeToday ? undefined : rowSaving(z.quest?.id)} />
       ))}
     </Screen>
   );
