@@ -3,6 +3,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
+import { DueDeletion, runDeletions } from "../packages/ops/src/deletions.ts";
 
 const url = process.env.DATABASE_URL ?? "postgres://postgres@127.0.0.1:54329/quest";
 const db = new pg.Client({ connectionString: url });
@@ -172,6 +173,41 @@ scenario("A11 done when: account deletion works, with 7 days to change your mind
   }
   assert.equal(await count("select count(*) n from makes where id = $1", [kept]), 0);
   assert.equal(await count("select count(*) n from deletion_requests where user_id = $1 and completed_at is not null", [T]), 1, "the record that it was done stays");
+});
+
+scenario("the real deletion job: Plus stopped, photos removed, account gone, others untouched", async () => {
+  const mine = await make("reviewed");
+  await asAdmin();
+  const other = "00000000-0000-4000-8000-0000000011a2";
+  await q("insert into auth.users (id) values ($1)", [other]);
+  await q("insert into teens (id, handle, age_bracket, country) values ($1, 'LoudHeron-71', '18_19', 'CA')", [other]);
+  const path = (await one("select storage_path from makes where id = $1", [mine])).storage_path;
+  const storage = new Set([path, `${T}/extra.jpg`, `${other}/keep.jpg`]);
+  const billing = [];
+  const deps = {
+    due: async (now) => {
+      await asServer();
+      return DueDeletion.array().parse((await one("select deletions_due($1) as d", [now.toISOString()])).d);
+    },
+    cancelBilling: async (u) => (billing.push(u), 1),
+    listFolder: async (f) => [...storage].filter((p) => p.startsWith(`${f}/`)).slice(0, 1),
+    removeFiles: async (paths) => paths.forEach((p) => storage.delete(p)),
+    complete: async (u) => {
+      await asServer();
+      await q("select complete_deletion($1)", [u]);
+    },
+    now: () => new Date(Date.now() + 8 * 86400000), // 8 days from now
+  };
+  await as(T);
+  await q("select request_account_deletion()");
+  const run = await runDeletions(deps);
+  assert.deepEqual(run, { deleted: [T], photosRemoved: 2, subscriptionsCancelled: 1, failed: [] });
+  assert.deepEqual([...storage], [`${other}/keep.jpg`]);
+  assert.deepEqual(billing, [T]);
+  await asAdmin();
+  assert.equal(await count("select count(*) n from teens where id in ($1, $2)", [T, other]), 1);
+  // The next run has nothing to do.
+  assert.deepEqual((await runDeletions(deps)).deleted, []);
 });
 
 scenario("deletion waits while a safety report needs the evidence", async () => {
