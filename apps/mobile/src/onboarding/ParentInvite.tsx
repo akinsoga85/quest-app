@@ -57,7 +57,7 @@ export function ParentInvite({ inOnboarding }: { inOnboarding: boolean }) {
     <Screen
       title={under18 ? "One quick step: ask a parent" : "Link a parent"}
       titleSize="title"
-      header={<StepHeader label={inOnboarding ? "Step 2 of 2" : "Parent link"} back={!inOnboarding} />}
+      header={<StepHeader label={inOnboarding ? "Step 2 of 3" : "Parent link"} back={!inOnboarding} />}
       footer={
         <>
           <ErrorText message={error} />

@@ -2,6 +2,8 @@ import { colors, minTouch, radius, space } from "@quest/tokens";
 import { router, type Tabs } from "expo-router";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { firstOpenQuest } from "../today/logic";
+import { useToday } from "../today/TodayProvider";
 import { HomeIcon, LevelsIcon, PlusIcon, StudioIcon, YouIcon } from "./icons";
 import { Text } from "./Text";
 
@@ -18,6 +20,8 @@ const ICONS: Record<string, typeof HomeIcon> = {
 export function TabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const target = minTouch(Platform.OS);
+  const { today } = useToday();
+  const next = firstOpenQuest(today);
 
   const tabs = state.routes.map((route, index) => {
     const focused = state.index === index;
@@ -48,8 +52,8 @@ export function TabBar({ state, descriptors, emitter, navigateToTab }: TabBarPro
     <Pressable
       key="make"
       accessibilityRole="button"
-      accessibilityLabel="Make something"
-      onPress={() => router.push("/make")}
+      accessibilityLabel={next ? `Make something: ${next.title}` : "Make something"}
+      onPress={() => router.push(next ? { pathname: "/make", params: { questId: next.id } } : "/make")}
       style={[styles.make, { minHeight: target }]}
     >
       <PlusIcon color={colors.limeInk} size={24} strokeWidth={2.5} />

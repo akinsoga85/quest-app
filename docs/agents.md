@@ -24,7 +24,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | ID | Package | Owns (contract and tables) | Figma | Done when |
 |---|---|---|---|---|
 | A1 | Sign-up, age and consent | `bracketForAge`, `bracketFromAgeRange`, `ageFromBirthMonth`, `modeFor`, `needsParentConsent`; `teen.create`, `signup.abandon`, `parent.invite`, `parent.accept`, `ai.consent` (Postgres functions); `private.coach_allowed`; tables `teens`, `parents`, `parent_links`, `app_config` | H1, H2, H3, H14a, H22 | **Built.** Ages 12–19 in Canada and the US tested; under-13s stopped and nothing kept; links expire after 7 days. Store age signal (expo-age-range) still to check on real phones |
-| A2 | Quests and Today | `Quest`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | One quest per zone at local midnight; weekly streak correct across time zones |
+| A2 | Quests and Today | `Quest`, `Today`, `localDay`, `weekStart`, `weekDays`, `weeklyStreak`, `MAKING_DAYS_PER_WEEK`; `zones.set`, `today.get` (Postgres functions); `makes.local_day`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | **Built.** Quests appear at local midnight in 13 time zones, including daylight-saving days; the weekly streak matches the contract across time zones and travel |
 | A3 | Capture and upload | `make.createUpload`; table `makes`; storage bucket `makes` | H6, H23 | No upload keeps location data; uploads resume after a dropped connection; system photo picker on Android |
 | A4 | Coach agent | `CoachReview`, `coachReviewJsonSchema`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`; tables `reviews`, `skill_points` | H7, H16 | Passes the coach test set (Lean V1 tab: "How we know it's good"); no review without `ai_coach_consent` |
 | A5 | Safety scan | `make.submit`; table `safety_scans` | H8 (safety card) | Test hashes always blocked; flagged items reach the admin queue; nothing reaches the coach unscanned |
@@ -43,8 +43,17 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
   age signal and both sign-ins on a real iPhone (iOS 26+) and Android phone in a
   development build. The parent consent web page (H24) is A8's; it calls
   `accept_parent_invite` after its adult check.
+- **A2 quests and Today:** built on branch `a2-today` (on top of `a1-signup`).
+  Zone picking is the last onboarding step and can be changed from the You tab.
 - **For A3, A4 and A5:** check `private.coach_allowed(teen_id)` before anything
   leaves the phone: it needs the teen's yes, plus an active parent link for under-18s.
+- **For A3:** a make's `local_day` is set by a trigger from the teen's time zone and
+  `created_at`. The app can't set either; a server function may pass a capture time
+  for photos taken offline (never in the future). Makes count for the streak unless
+  `blocked`.
+- **For A6 and A11:** a scheduled quest stays hidden until the teen's local midnight on
+  its day, so schedule weeks ahead freely. A day with no quest shows "on its way" for
+  that zone.
 
 ## Already enforced by the database
 
@@ -55,4 +64,5 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 - A make can be shared only after it's reviewed, and only with an actively linked parent.
 - A parent sees only the makes sent to them; only that parent can cheer.
 - At most three zones per teen, only open zones; skill points must match the review's zone.
+- Nobody sees a later day's quest before their local midnight; teens' time zones are real IANA names.
 - Deleting an account removes the teen's data and keeps the deletion record.

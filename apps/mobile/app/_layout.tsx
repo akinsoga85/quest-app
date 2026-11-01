@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, useAccount } from "../src/lib/account";
+import { TodayProvider } from "../src/today/TodayProvider";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -30,13 +31,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <AccountProvider>
-        <Routes />
+        <TodayProvider>
+          <Routes />
+        </TodayProvider>
       </AccountProvider>
     </SafeAreaProvider>
   );
 }
 
-// Each screen is reachable only at its step: sign in, age, ask a parent, app.
+// Each screen is reachable only at its step: sign in, age, ask a parent, zones, app.
 // Changing step (signing in, making a profile, a parent saying yes) moves the
 // teen on automatically.
 function Routes() {
@@ -62,11 +65,15 @@ function Routes() {
       <Stack.Protected guard={step === "parent"}>
         <Stack.Screen name="(onboarding)/parent" />
       </Stack.Protected>
+      <Stack.Protected guard={step === "zones"}>
+        <Stack.Screen name="(onboarding)/zones" />
+      </Stack.Protected>
       <Stack.Protected guard={step === "done"}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="make" options={{ presentation: "modal" }} />
         <Stack.Screen name="ai-consent" options={{ presentation: "modal" }} />
         <Stack.Screen name="invite-parent" options={{ presentation: "modal" }} />
+        <Stack.Screen name="edit-zones" options={{ presentation: "modal" }} />
       </Stack.Protected>
     </Stack>
   );

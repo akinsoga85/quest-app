@@ -32,7 +32,15 @@ describe("store age signal", () => {
 });
 
 describe("onboarding flow", () => {
-  const base: OnboardingState = { loading: false, signedIn: true, teen: null, parentLinked: false, waitingForParent: false };
+  const base: OnboardingState = { loading: false, signedIn: true, teen: null, parentLinked: false, waitingForParent: false, hasZones: true };
+
+  it("asks for zones last, after the parent step", () => {
+    const teen = { ageBracket: "13_15" } as const;
+    expect(onboardingStep({ ...base, teen, hasZones: false })).toBe("parent");
+    expect(onboardingStep({ ...base, teen, waitingForParent: true, hasZones: false })).toBe("zones");
+    expect(onboardingStep({ ...base, teen: { ageBracket: "18_19" }, hasZones: false })).toBe("zones");
+    expect(onboardingStep({ ...base, teen: { ageBracket: "18_19" }, hasZones: true })).toBe("done");
+  });
 
   it("goes sign in, age, parent, done", () => {
     expect(onboardingStep({ ...base, loading: true })).toBe("loading");

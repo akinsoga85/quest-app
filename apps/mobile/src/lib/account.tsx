@@ -1,4 +1,4 @@
-import type { AgeBracket, AppMode } from "@quest/contract";
+import { ZONES, type AgeBracket, type AppMode, type ZoneId } from "@quest/contract";
 import type { Session } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -23,6 +23,7 @@ interface AccountValue {
   session: Session | null;
   teen: Teen | null;
   parentLinks: ParentLink[];
+  zones: ZoneId[]; // picked zones, in zone order
   step: OnboardingStep;
   refresh: () => Promise<void>;
   setWaitingForParent: (waiting: boolean) => Promise<void>;
@@ -38,6 +39,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [sessionLoaded, setSessionLoaded] = useState(!supabaseConfigured);
   const [teen, setTeen] = useState<Teen | null>(null);
   const [parentLinks, setParentLinks] = useState<ParentLink[]>([]);
+  const [zones, setZones] = useState<ZoneId[]>([]);
   const [waiting, setWaiting] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -57,18 +59,22 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     if (!userId) {
       setTeen(null);
       setParentLinks([]);
+      setZones([]);
       setWaiting(false);
       setProfileLoaded(true);
       return;
     }
-    const [teenRes, linksRes, waitingValue] = await Promise.all([
+    const [teenRes, linksRes, zonesRes, waitingValue] = await Promise.all([
       supabase.from("teens").select("id, handle, age_bracket, mode, ai_coach_consent").eq("id", userId).maybeSingle(),
       supabase.from("parent_links").select("status, invite_expires_at, created_at").eq("teen_id", userId).order("created_at", { ascending: false }),
+      supabase.from("teen_zones").select("zone_id").eq("teen_id", userId),
       SecureStore.getItemAsync(waitingKey(userId)),
     ]);
     const t = teenRes.data;
     setTeen(t ? { id: t.id, handle: t.handle, ageBracket: t.age_bracket, mode: t.mode, aiCoachConsent: t.ai_coach_consent } : null);
     setParentLinks((linksRes.data ?? []).map((l) => ({ status: l.status, inviteExpiresAt: l.invite_expires_at, createdAt: l.created_at })));
+    const picked = new Set((zonesRes.data ?? []).map((z) => z.zone_id));
+    setZones((Object.keys(ZONES) as ZoneId[]).filter((z) => picked.has(z)));
     setWaiting(waitingValue === "1");
     setProfileLoaded(true);
   }, [userId]);
@@ -94,11 +100,12 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     teen,
     parentLinked: parentLinks.some((l) => l.status === "active"),
     waitingForParent: waiting,
+    hasZones: zones.length > 0,
   });
 
   const value = useMemo(
-    () => ({ session, teen, parentLinks, step, refresh, setWaitingForParent }),
-    [session, teen, parentLinks, step, refresh, setWaitingForParent],
+    () => ({ session, teen, parentLinks, zones, step, refresh, setWaitingForParent }),
+    [session, teen, parentLinks, zones, step, refresh, setWaitingForParent],
   );
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
