@@ -19,7 +19,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - name: Edge functions bundle and run
-        run: npm run build:functions && node scripts/check-coach-bundle.mjs && node scripts/check-scan-bundle.mjs
+        run: npm run build:functions && node scripts/check-coach-bundle.mjs && node scripts/check-scan-bundle.mjs && node scripts/check-writer-bundle.mjs
 
   database:
     name: Migrations and access rules
