@@ -20,6 +20,32 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_customers: {
+        Row: {
+          parent_id: string
+          stripe_customer_id: string
+          created_at: string
+        }
+        Insert: {
+          parent_id: string
+          stripe_customer_id: string
+          created_at?: string
+        }
+        Update: {
+          parent_id?: string
+          stripe_customer_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_customers_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: true
+            referencedRelation: "parents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_flags: {
         Row: {
           make_id: string
@@ -70,6 +96,39 @@ export type Database = {
           requested_at?: string
           completes_by?: string
           completed_at?: string | null
+        }
+        Relationships: []
+      }
+      entitlement_events: {
+        Row: {
+          event_id: string
+          teen_id: string | null
+          source: Database["public"]["Enums"]["entitlement_source"]
+          kind: Database["public"]["Enums"]["entitlement_kind"]
+          active_until: string | null
+          sandbox: boolean
+          applied: boolean
+          received_at: string
+        }
+        Insert: {
+          event_id: string
+          teen_id?: string | null
+          source: Database["public"]["Enums"]["entitlement_source"]
+          kind: Database["public"]["Enums"]["entitlement_kind"]
+          active_until?: string | null
+          sandbox?: boolean
+          applied: boolean
+          received_at?: string
+        }
+        Update: {
+          event_id?: string
+          teen_id?: string | null
+          source?: Database["public"]["Enums"]["entitlement_source"]
+          kind?: Database["public"]["Enums"]["entitlement_kind"]
+          active_until?: string | null
+          sandbox?: boolean
+          applied?: boolean
+          received_at?: string
         }
         Relationships: []
       }
@@ -880,9 +939,17 @@ export type Database = {
         Args: { p_token: string }
         Returns: { teen_handle: string }[]
       }
+      apply_entitlement_event: {
+        Args: { p_event_id: string; p_teen_id: string; p_source: Database["public"]["Enums"]["entitlement_source"]; p_kind: Database["public"]["Enums"]["entitlement_kind"]; p_active_until: string; p_sandbox: boolean }
+        Returns: string
+      }
       approve_quest_week: {
         Args: { p_week_id: string; p_by: string }
         Returns: undefined
+      }
+      billing_customer_for: {
+        Args: { p_parent_id: string }
+        Returns: string
       }
       cheer_share: {
         Args: { p_share_id: string; p_cheer: Database["public"]["Enums"]["cheer"] }
@@ -964,9 +1031,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      parent_plus: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       pick_postcard: {
         Args: { p_postcard_id: string; p_make_id: string }
         Returns: undefined
+      }
+      plus_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       rate_review: {
         Args: { p_review_id: string; p_helpful: boolean }
@@ -982,6 +1057,10 @@ export type Database = {
       }
       reject_quest_week: {
         Args: { p_week_id: string; p_by: string; p_note: string }
+        Returns: undefined
+      }
+      save_billing_customer: {
+        Args: { p_parent_id: string; p_customer_id: string }
         Returns: undefined
       }
       save_quest_week: {
@@ -1027,6 +1106,7 @@ export type Database = {
       age_source: "store" | "self_declared"
       app_mode: "studio" | "walls"
       cheer: "great_light" | "great_framing" | "great_moment" | "clever_idea" | "love_this"
+      entitlement_kind: "active" | "cancelled" | "expired" | "refunded" | "billing_issue"
       entitlement_source: "app_store" | "google_play" | "web"
       link_status: "pending" | "active" | "revoked"
       make_status: "uploaded" | "scanning" | "blocked" | "held_for_review" | "reviewing" | "reviewed" | "retake" | "no_review"

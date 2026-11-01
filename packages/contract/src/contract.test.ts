@@ -17,6 +17,9 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   CoachClaim,
+  canBuyInApp,
+  fromRevenueCat,
+  fromStripe,
   CHEER_LABELS,
   Cheer,
   SAFETY_THRESHOLDS,
@@ -537,5 +540,40 @@ describe("A8: family sharing and the parent page", () => {
     const o = Api["parent.overview"].output.parse({ weeklyEmail: true, teens: [{ teenId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", handle: "BlueFox-482", coachOn: true, questsThisWeek: 5, zones: [{ zone: "photography", points: 30 }] }] });
     expect(levelFor(o.teens[0]!.zones[0]!.points).level).toBe(3);
     expect(Api["family.status"].output.parse({ parents: [{ name: "Mom" }], sent: false, cheers: [] }).sent).toBe(false);
+  });
+});
+
+describe("A9: reading store and Stripe events", () => {
+  const teen = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
+  const rc = (type: string, extra: Record<string, unknown> = {}) =>
+    fromRevenueCat({ event: { id: "e1", type, app_user_id: teen, store: "APP_STORE", expiration_at_ms: Date.UTC(2026, 11, 1), environment: "PRODUCTION", ...extra } });
+
+  it("maps RevenueCat events to what they mean for Plus", () => {
+    expect(rc("INITIAL_PURCHASE")).toEqual({ eventId: "rc:e1", teenId: teen, source: "app_store", kind: "active", activeUntil: "2026-12-01T00:00:00.000Z", sandbox: false });
+    expect(rc("RENEWAL")?.kind).toBe("active");
+    expect(rc("CANCELLATION", { cancel_reason: "UNSUBSCRIBE" })?.kind).toBe("cancelled");
+    expect(rc("CANCELLATION", { cancel_reason: "CUSTOMER_SUPPORT" })?.kind).toBe("refunded");
+    expect(rc("EXPIRATION")?.kind).toBe("expired");
+    expect(rc("BILLING_ISSUE")?.kind).toBe("billing_issue");
+    expect(rc("INITIAL_PURCHASE", { store: "PLAY_STORE" })?.source).toBe("google_play");
+    expect(rc("TRANSFER")).toBeNull();
+    expect(rc("INITIAL_PURCHASE", { app_user_id: "not-a-teen-id" })).toBeNull();
+    expect(fromRevenueCat({})).toBeNull();
+  });
+
+  it("maps Stripe subscription events, reading the period end from either place", () => {
+    const sub = (type: string, object: Record<string, unknown>) =>
+      fromStripe({ id: "evt_1", type, livemode: true, data: { object: { object: "subscription", metadata: { teen_id: teen }, ...object } } });
+    expect(sub("customer.subscription.created", { status: "active", current_period_end: 1796083200 })).toMatchObject({ kind: "active", source: "web", activeUntil: "2026-12-01T00:00:00.000Z" });
+    expect(sub("customer.subscription.updated", { status: "active", cancel_at_period_end: true, items: { data: [{ current_period_end: 1796083200 }] } })?.kind).toBe("cancelled");
+    expect(sub("customer.subscription.updated", { status: "past_due", current_period_end: 1796083200 })?.kind).toBe("billing_issue");
+    expect(sub("customer.subscription.deleted", { status: "canceled", current_period_end: 1796083200 })?.kind).toBe("expired");
+    expect(fromStripe({ id: "evt_2", type: "invoice.paid", data: { object: { object: "invoice" } } })).toBeNull();
+  });
+
+  it("offers in-app purchase only to 18–19s", () => {
+    expect(canBuyInApp("13_15")).toBe(false);
+    expect(canBuyInApp("16_17")).toBe(false);
+    expect(canBuyInApp("18_19")).toBe(true);
   });
 });

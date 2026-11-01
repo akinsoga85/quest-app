@@ -14,6 +14,7 @@ const ctx: CoachContext = {
   zone: "photography",
   quest: { title: "Shadows that tell a story", brief: "Find hard light and photograph the shadow, not the thing.", trainsSkill: "photography.light", tips: ["Side light makes longer shadows"] },
   zonePoints: 12,
+  plus: false,
   history: { questsDone: 4, skillPoints: { "photography.light": 5 }, recentTips: ["Keep the horizon level."] },
 };
 const image = { base64: "AAAA", mediaType: "image/jpeg" as const };
@@ -161,6 +162,10 @@ describe("what's sent to Claude", () => {
     const sent = JSON.stringify(params.messages);
     expect(sent).not.toContain(ctx.makeId);
     expect(sent).not.toContain(ctx.storagePath);
+  });
+
+  it("thinks harder for Plus teens", () => {
+    expect(reviewParams({ ctx: { ...ctx, plus: true }, image }, DEFAULT_MODELS).output_config.effort).toBe("high");
   });
 
   it("can switch models and effort from the environment", () => {

@@ -55,6 +55,7 @@ export function contextFor(c: EvalCase, i: number): CoachContext {
     zone: c.zone,
     quest: c.quest,
     zonePoints: c.zonePoints,
+    plus: false,
     history: { questsDone: 0, skillPoints: {}, recentTips: [] },
   };
 }

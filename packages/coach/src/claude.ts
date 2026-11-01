@@ -44,7 +44,8 @@ export function reviewParams(input: ReviewInput, models: CoachModels) {
     // the API retries on a fallback model in the same call.
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default" as const,
-    output_config: { effort: models.reviewEffort, format: betaZodOutputFormat(CoachDraft) },
+    // Plus (A9): deeper coaching, with more thinking per review.
+    output_config: { effort: input.ctx.plus ? ("high" as const) : models.reviewEffort, format: betaZodOutputFormat(CoachDraft) },
     system: [{ type: "text" as const, text: reviewSystem(input.ctx.zone), cache_control: { type: "ephemeral" as const } }],
     messages: [
       {
