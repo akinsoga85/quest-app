@@ -1,5 +1,11 @@
-// Levels per zone, earned from coach skill points. Names come from the hi-fi
-// Levels screen; thresholds are a first guess to tune in the pilot.
+import { z } from "zod";
+import { MakeStatus } from "./photo";
+
+// Levels per zone. Points (PRD R32) come from quests finished (one per quest,
+// once the safety scan passes; a retake doesn't count twice) and coach skill
+// points only; cheers, fans and second takes give nothing. Names come from the
+// hi-fi Levels screen; thresholds are a first guess to tune in the pilot.
+// private.zone_points and private.level_for in the database mirror these.
 export const LEVELS = [
   { level: 1, name: "Spark", from: 0 },
   { level: 2, name: "Explorer", from: 10 },
@@ -37,3 +43,41 @@ export function levelFor(points: number): LevelState {
 export function levelledUp(before: number, after: number): boolean {
   return levelFor(after).level > levelFor(before).level;
 }
+
+// A skill's score, 1–10, from its last 10 coach scores (0–2 each), or null
+// before the first (PRD R33). Mirrors private.skill_score in the database.
+export function skillScore(lastTenPoints: readonly number[]): number | null {
+  const pts = lastTenPoints.slice(0, 10);
+  if (pts.length === 0) return null;
+  const avg = pts.reduce((a, b) => a + b, 0) / pts.length;
+  return Math.round(1 + 4.5 * avg);
+}
+
+const MakeRef = z.object({ makeId: z.uuid(), day: z.iso.date() });
+
+// levels.get: one entry per zone the teen has picked or has points in.
+export const ZoneLevel = z.object({
+  zone: z.string(),
+  points: z.number().int().min(0),
+  skills: z.record(z.string(), z.number().int().min(1).max(10).nullable()),
+  compare: z.object({ before: MakeRef, after: MakeRef, sameQuest: z.boolean() }).nullable(), // "You vs. you"
+});
+export type ZoneLevel = z.infer<typeof ZoneLevel>;
+
+// studio.list: the portfolio, newest first.
+export const StudioMake = z.object({
+  id: z.uuid(),
+  zone: z.string(),
+  questTitle: z.string(),
+  localDay: z.iso.date(),
+  status: MakeStatus,
+  storagePath: z.string(),
+  createdAt: z.string(),
+});
+export type StudioMake = z.infer<typeof StudioMake>;
+export const StudioPage = z.object({ total: z.number().int().min(0), makes: z.array(StudioMake) });
+export type StudioPage = z.infer<typeof StudioPage>;
+
+// A postcard earned at a level-up, until the teen has seen it.
+export const NewPostcard = z.object({ id: z.uuid(), zone: z.string(), level: z.number().int().min(2).max(5), makeId: z.uuid().nullable() });
+export type NewPostcard = z.infer<typeof NewPostcard>;

@@ -193,11 +193,13 @@ scenario("only approved quests are visible", async () => {
 });
 
 scenario("progress view shows a teen only their own points", async () => {
+  // Points are quests finished plus coach skill points (PRD R32, A7): A has one
+  // reviewed make with one skill point; B has one reviewed make and no points.
   await as(A);
   const rows = (await q("select zone_id, points from zone_progress")).rows;
-  assert.deepEqual(rows, [{ zone_id: "photography", points: 1 }]);
+  assert.deepEqual(rows, [{ zone_id: "photography", points: 2 }]);
   await as(B);
-  assert.equal(await count("select count(*) n from zone_progress"), 0);
+  assert.deepEqual((await q("select teen_id, points from zone_progress")).rows, [{ teen_id: B, points: 1 }]);
 });
 
 scenario("account deletion removes the teen's data but keeps the request record", async () => {

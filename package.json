@@ -16,7 +16,7 @@
     "db:up": "bash scripts/db-local.sh up",
     "db:reset": "bash scripts/db-local.sh reset",
     "db:down": "bash scripts/db-local.sh down",
-    "db:test": "node --import ./scripts/register-ts.mjs --test --test-concurrency=1 scripts/test-db.mjs scripts/test-db-a1.mjs scripts/test-db-a2.mjs scripts/test-db-a3.mjs scripts/test-db-a4.mjs scripts/test-db-a5.mjs scripts/test-db-a6.mjs",
+    "db:test": "node --import ./scripts/register-ts.mjs --test --test-concurrency=1 scripts/test-db.mjs scripts/test-db-a1.mjs scripts/test-db-a2.mjs scripts/test-db-a3.mjs scripts/test-db-a4.mjs scripts/test-db-a5.mjs scripts/test-db-a6.mjs scripts/test-db-a7.mjs",
     "gen:types": "node scripts/gen-db-types.mjs",
     "check": "npm run typecheck && npm run lint && npm run test",
     "coach": "node --import ./scripts/register-ts.mjs packages/coach/src/cli.ts",
