@@ -459,7 +459,9 @@ function PlusCard({ status, busy, onStart, onManage }: { status: ParentPlus[numb
   return (
     <section className="card" aria-labelledby="plus">
       <h2 id="plus">Plus</h2>
-      {status?.active ? (
+      {status?.included ? (
+        <p className="text2">Plus is included free for ages 13–15: deeper coaching and a second take on each quest. There's nothing to buy.</p>
+      ) : status?.active ? (
         <>
           <p className="text2">{plusLine(status.until, status.source)}</p>
           {status.source === "web" ? (

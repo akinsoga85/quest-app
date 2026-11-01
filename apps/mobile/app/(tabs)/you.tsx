@@ -7,8 +7,9 @@ import { pendingInvite, useAccount } from "../../src/lib/account";
 import { signOut } from "../../src/lib/auth";
 import { supabase } from "../../src/lib/supabase";
 import { dropPushesOn, enableDropPushes } from "../../src/notify/push";
+import { plusRow } from "../../src/plus/logic";
 import { downloadMyWork } from "../../src/settings/download";
-import { DELETE_FOOTNOTE, clockLabel, deletionLine, providerLabel, shortDate } from "../../src/settings/logic";
+import { DELETE_FOOTNOTE, clockLabel, deletionLine, providerLabel } from "../../src/settings/logic";
 import { SettingsExtra, SettingsRow, SettingsSection } from "../../src/settings/rows";
 import { Button } from "../../src/ui/Button";
 import { Card, Screen } from "../../src/ui/Screen";
@@ -57,6 +58,7 @@ export default function You() {
   };
 
   const linked = parentLinks.some((l) => l.status === "active");
+  const plusLine = plusRow(plus);
   const waiting = pendingInvite(parentLinks) !== null;
 
   const coachOff = () =>
@@ -107,9 +109,7 @@ export default function You() {
 
       <SettingsSection title="Your studio">
         <SettingsRow first label="Zones" value={zones.map((z) => ZONES[z].name).join(", ") || "Pick some"} onPress={() => router.push("/edit-zones")} />
-        {/* Plus shows only once it's on: the app never points to buying it
-            elsewhere (App Store 3.1.1; see docs/store-release.md). */}
-        {plus?.active ? <SettingsRow label="Plus" value={`On${plus.until ? ` until ${shortDate(plus.until)}` : ""}`} /> : null}
+        {plusLine ? <SettingsRow label="Plus" value={plusLine.value} onPress={() => router.push("/plus")} /> : null}
       </SettingsSection>
 
       <SettingsSection title="Notifications">

@@ -1,11 +1,15 @@
 import { z } from "zod";
 import type { AgeBracket } from "./age";
 
-// Plus (A9). Prices are the plan's starting points, to test. Under-18s can't
-// buy anything themselves: a parent buys Plus on the parent page (Stripe).
-// 18–19s can also buy in the app (App Store or Google Play, through
-// RevenueCat). Every purchase arrives as a webhook and becomes an
-// EntitlementEvent; the database applies each one once.
+// Plus (A9). Prices are the plan's starting points, to test.
+//   13–15: Plus is included, free.
+//   16–17: a linked parent buys it on the parent page (Stripe), or the teen
+//          buys it in the app once a parent is linked (App Store or Google
+//          Play, through RevenueCat).
+//   18–19: in the app, or on the parent page if a parent is linked.
+// Every purchase arrives as a webhook and becomes an EntitlementEvent; the
+// database applies each one once. The App Store asks that a subscription the
+// app unlocks is also sold in the app (3.1.3(b)), hence in-app for 16+.
 
 export const PLUS = {
   monthlyUsd: 7.99,
@@ -15,11 +19,23 @@ export const PLUS = {
     "A printed postcard every month they level up (when prints launch)",
     "A monthly skill report for you",
   ],
+  // What the teen's Plus screen promises: only perks that exist today.
+  teenPerks: ["Deeper coaching: the coach takes more time over every make", "A second take: make each quest twice and see what changed"],
+  // The RevenueCat entitlement the store products unlock.
+  entitlement: "plus",
 } as const;
 
-// Who may buy where.
-export function canBuyInApp(bracket: AgeBracket): boolean {
-  return bracket === "18_19";
+// 13–15s get Plus free.
+export function plusIncluded(bracket: AgeBracket): boolean {
+  return bracket === "13_15";
+}
+
+// Who may buy in the app: 18–19s, and 16–17s once a parent is linked (so a
+// parent knows). 13–15s never need to.
+export function canBuyInApp(bracket: AgeBracket, parentLinked: boolean): boolean {
+  if (bracket === "18_19") return true;
+  if (bracket === "16_17") return parentLinked;
+  return false;
 }
 
 export const EntitlementSource = z.enum(["app_store", "google_play", "web"]);
@@ -111,12 +127,16 @@ export function fromStripe(body: unknown): EntitlementEvent | null {
 // plus.status: what the app shows the teen.
 export const PlusStatus = z.object({
   active: z.boolean(),
+  included: z.boolean(), // free for 13–15; `until` and `source` are then null
   until: z.string().nullable(),
   source: EntitlementSource.nullable(),
   canBuyInApp: z.boolean(),
+  needsParent: z.boolean(), // 16–17 with no parent linked yet
 });
 export type PlusStatus = z.infer<typeof PlusStatus>;
 
 // parent.plus: Plus for each linked teen, on the parent page.
-export const ParentPlus = z.array(z.object({ teenId: z.uuid(), active: z.boolean(), until: z.string().nullable(), source: EntitlementSource.nullable() }));
+export const ParentPlus = z.array(
+  z.object({ teenId: z.uuid(), active: z.boolean(), included: z.boolean(), until: z.string().nullable(), source: EntitlementSource.nullable() }),
+);
 export type ParentPlus = z.infer<typeof ParentPlus>;

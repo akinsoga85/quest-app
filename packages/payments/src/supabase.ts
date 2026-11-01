@@ -24,9 +24,15 @@ export function paymentsDepsFromEnv(env: Record<string, string | undefined>): Pa
       const asParent = createClient(url, anon, { auth: { persistSession: false }, global: { headers: { Authorization: `Bearer ${jwt}` } } });
       const { data: user } = await asParent.auth.getUser(jwt);
       if (!user.user) return null;
-      const { data } = await asParent.rpc("parent_overview");
+      const [{ data }, { data: plusData }] = await Promise.all([asParent.rpc("parent_overview"), asParent.rpc("parent_plus")]);
       const overview = Api["parent.overview"].output.safeParse(data);
-      return { id: user.user.id, email: user.user.email ?? null, teenIds: overview.success ? overview.data.teens.map((t) => t.teenId) : [] };
+      const plus = Api["parent.plus"].output.safeParse(plusData);
+      return {
+        id: user.user.id,
+        email: user.user.email ?? null,
+        teenIds: overview.success ? overview.data.teens.map((t) => t.teenId) : [],
+        includedTeenIds: plus.success ? plus.data.filter((p) => p.included).map((p) => p.teenId) : [],
+      };
     },
     fetch: (u, init) => fetch(u, init),
     now: () => Date.now(),

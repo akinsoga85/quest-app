@@ -86,6 +86,7 @@ function Routes() {
         <Stack.Screen name="send-family/[makeId]" options={{ presentation: "modal" }} />
         <Stack.Screen name="drop" options={{ presentation: "modal" }} />
         <Stack.Screen name="delete-account" options={{ presentation: "modal" }} />
+        <Stack.Screen name="plus" options={{ presentation: "modal" }} />
       </Stack.Protected>
     </Stack>
   );

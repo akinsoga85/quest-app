@@ -90,7 +90,9 @@ the evening drop (H19). Use test accounts and test photos only.
 
 **App Review notes** (App Store) / **App access** (Play): a demo account that's
 18–19 (no parent step) with a quest already made, and a line on how the parent
-consent works for under-18s. Reviewers can't receive the parent email.
+consent works for under-18s. Reviewers can't receive the parent email. Say
+that Plus is free for 13–15s and sold in the app to 16+, and that the demo
+account can buy it with a sandbox tester.
 
 ## 4. Privacy labels
 
@@ -153,16 +155,16 @@ what they entered (A1).
   the coach; the database enforces it (A1, `private.coach_allowed`).
 - **Safety:** every photo is checked before anyone sees it, known abuse
   imagery is blocked and reported (A5, `docs/operations.md`).
-- **Plus and in-app purchase — decision needed before release.** Today under-18s
-  get Plus through a parent on the web, and 18–19s are meant to buy in the app.
-  Apple's rules (3.1.1 and 3.1.3(b)) say an app that unlocks a subscription
-  bought elsewhere must also sell it as an in-app purchase, and outside the US
-  the app may not point people to buying elsewhere. The app now only shows
-  Plus once it's on and never says where to buy it. Before the App Store
-  release, choose one: (a) sell Plus in the app to everyone (under-18s buy
-  through Apple's Ask to Buy, so a parent still approves) alongside the parent
-  page; or (b) launch on iOS without Plus and add it with (a) later. Google
-  Play allows the parent-page purchase as long as the app doesn't steer to it.
+- **Plus and in-app purchase (decided).** 13–15s get Plus free, so they're
+  never sold anything. 16+ pay, and Plus is sold in the app (App Store and
+  Google Play, through RevenueCat), as Apple asks for a subscription the app
+  unlocks (3.1.3(b)). 16–17s see "Start Plus" only once a parent is linked; a
+  parent can also buy it on the parent page. The app never points to buying
+  anywhere else. The Plus screen shows the store's price, the renewal terms,
+  "Restore purchases", and links to the terms of use and privacy policy, as
+  both stores require. Note that a parent only approves a 16–17's in-app
+  purchase if the family uses Ask to Buy (Apple) or purchase approvals
+  (Google); otherwise the parent link is the check.
 
 ## 7. Release checklist
 
@@ -172,7 +174,29 @@ what they entered (A1).
 - [ ] Supabase production project: migrations pushed, functions deployed with their secrets, schedules on (README)
 - [ ] Privacy policy and support pages live; URLs in both consoles
 - [ ] Privacy labels (section 4), age ratings (section 5) and data deletion URL entered
-- [ ] Plus decision made (section 6)
+- [ ] Plus set up in the stores (section 8)
 - [ ] Internal testing on both stores, with the real-phone checks in section 2
 - [ ] Demo account for review
 - [ ] Safety vendors live (A5) — the app holds every photo until they are
+
+## 8. Selling Plus in the app (needs your accounts)
+
+1. **App Store Connect:** a subscription group "Plus" with one auto-renewing
+   monthly subscription (for example `quest_plus_monthly`), its price, a
+   display name and description, and a review screenshot of the Plus screen.
+   Submit it together with the app version: the first subscription must be
+   reviewed with a build.
+2. **Google Play Console:** a subscription with a monthly base plan, its
+   price, and the same name. Play needs an uploaded build before you can add it.
+3. **RevenueCat:** add both apps and their store credentials, an entitlement
+   with the identifier `plus`, both products attached to it, and a `default`
+   offering with a monthly package. Put the public SDK keys in the EAS
+   environment variables `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and
+   `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`, and point RevenueCat's webhook at
+   `…/functions/v1/payments/webhook` (README, Plus and payments).
+4. **Terms and privacy links:** set `EXPO_PUBLIC_TERMS_URL` and
+   `EXPO_PUBLIC_PRIVACY_URL` (they default to `/terms` and `/privacy` on the
+   parent site, which don't exist yet).
+5. **Test** with an App Store sandbox tester and a Play license tester: buy,
+   cancel, restore on a second phone, and a 16–17 account before and after a
+   parent links. Plus should show in Settings within seconds of buying.

@@ -125,8 +125,13 @@ scenario("each event counts once; billing issues wait; unknown teens are recorde
 });
 
 scenario("A9 done when: under-18 purchases need a parent's approval", async () => {
-  // In the app, only 18–19s are offered Plus; under-18s are sent to a parent.
-  assert.equal((await plus(T)).canBuyInApp, false);
+  // A 16–17 with no parent linked can't buy in the app; once linked, they can.
+  await asAdmin();
+  await q("update parent_links set status = 'revoked' where teen_id = $1", [T]);
+  assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).needsParent], [false, true]);
+  await asAdmin();
+  await q("update parent_links set status = 'active' where teen_id = $1", [T]);
+  assert.deepEqual([(await plus(T)).canBuyInApp, (await plus(T)).needsParent], [true, false]);
   assert.equal((await plus(A)).canBuyInApp, true);
   // The parent buys on the parent page and sees it there.
   await apply(stripe("customer.subscription.created", T, "active", 30));
@@ -140,6 +145,47 @@ scenario("A9 done when: under-18 purchases need a parent's approval", async () =
     await rejects("select * from entitlement_events", [], /permission denied/);
     await rejects("select * from billing_customers", [], /permission denied/);
   }
+});
+
+scenario("13–15s get Plus free, everywhere; 16+ pay", async () => {
+  const Y = "00000000-0000-4000-8000-0000000009a3";
+  await asAdmin();
+  await q("insert into auth.users (id) values ($1)", [Y]);
+  await q("insert into teens (id, handle, age_bracket, country, ai_coach_consent) values ($1, 'TinyOwl-15', '13_15', 'US', true)", [Y]);
+  await q("insert into parent_links (teen_id, parent_id, status, consented_at) values ($1, $2, 'active', now())", [Y, P]);
+  const y = await plus(Y);
+  assert.deepEqual([y.active, y.included, y.until, y.source, y.canBuyInApp, y.needsParent], [true, true, null, null, false, false]);
+  const t = await plus(T);
+  assert.deepEqual([t.active, t.included], [false, false], "16–17s pay");
+  // The parent page says it's included, so there's nothing to buy.
+  await as(P);
+  const mine = Api["parent.plus"].output.parse((await one("select parent_plus() as p")).p);
+  assert.deepEqual(mine.map((x) => [x.teenId, x.active, x.included]), [[T, false, false], [Y, true, true]]);
+  // The perks apply: a second take, and the coach thinks harder.
+  await asAdmin();
+  const quest = (await one("select quest_id from quest_schedule where day = private.today_for($1) and zone_id = 'photography'", [Y])).quest_id;
+  await as(Y);
+  await q("select record_make(gen_random_uuid(), $1, now())", [quest]);
+  await q("select record_make(gen_random_uuid(), $1, now())", [quest]);
+  await rejects("select record_make(gen_random_uuid(), $1, now())", [quest], /already made/);
+  await asAdmin();
+  const m = (await one("select id from makes where teen_id = $1 limit 1", [Y])).id;
+  await q("update makes set status = 'scanning' where id = $1", [m]);
+  await q("insert into safety_scans (make_id, result, vendor) values ($1, 'pass', 'test')", [m]);
+  await q("update makes set status = 'reviewing' where id = $1", [m]);
+  await asServer();
+  assert.equal((await one("select coach_claim($1) as c", [m])).c.context.plus, true);
+});
+
+scenario("a 16–17 buys Plus in the app once a parent is linked", async () => {
+  assert.equal((await plus(T)).canBuyInApp, true);
+  assert.equal(await apply(rc("INITIAL_PURCHASE", T, "PLAY_STORE", 30)), "applied");
+  const t = await plus(T);
+  assert.deepEqual([t.active, t.included, t.source], [true, false, "google_play"]);
+  assert.ok(Date.parse(t.until) > Date.now());
+  // Cancelling in the store keeps Plus to the end of the month.
+  await apply(rc("CANCELLATION", T, "PLAY_STORE", 30, { cancel_reason: "UNSUBSCRIBE" }));
+  assert.equal((await plus(T)).active, true);
 });
 
 scenario("Plus perks: a second take on a quest, and deeper coaching", async () => {

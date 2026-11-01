@@ -23,6 +23,8 @@ import {
   dropMessage,
   inQuietHours,
   canBuyInApp,
+  plusIncluded,
+  PLUS,
   fromRevenueCat,
   fromStripe,
   CHEER_LABELS,
@@ -576,10 +578,11 @@ describe("A9: reading store and Stripe events", () => {
     expect(fromStripe({ id: "evt_2", type: "invoice.paid", data: { object: { object: "invoice" } } })).toBeNull();
   });
 
-  it("offers in-app purchase only to 18–19s", () => {
-    expect(canBuyInApp("13_15")).toBe(false);
-    expect(canBuyInApp("16_17")).toBe(false);
-    expect(canBuyInApp("18_19")).toBe(true);
+  it("gives 13–15s Plus free, and sells it in the app to 16+ (16–17 once a parent is linked)", () => {
+    expect([plusIncluded("13_15"), plusIncluded("16_17"), plusIncluded("18_19")]).toEqual([true, false, false]);
+    expect([canBuyInApp("13_15", true), canBuyInApp("16_17", false), canBuyInApp("16_17", true), canBuyInApp("18_19", false)]).toEqual([false, false, true, true]);
+    // The teen's Plus screen promises only what exists.
+    expect(PLUS.teenPerks.join(" ")).not.toMatch(/print|report/i);
   });
 });
 
