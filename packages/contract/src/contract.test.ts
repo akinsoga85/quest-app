@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   Api,
@@ -16,6 +17,14 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   MAKING_DAYS_PER_WEEK,
+  MAKE_UPLOAD_WINDOW_HOURS,
+  PHOTO,
+  cropTo45,
+  hasPrivateMetadata,
+  jpegMetadata,
+  makePath,
+  resizeFor,
+  stripJpegMetadata,
   ZONES,
   addDays,
   localDay,
@@ -296,5 +305,71 @@ describe("A2: local days, weeks and the gentle streak", () => {
     expect(skillName("photography.light")).toBe("Light");
     expect(skillName("words.word_choice")).toBe("Word choice");
     for (const z of Object.values(ZONES)) expect(z.blurb.length).toBeGreaterThan(5);
+  });
+});
+
+describe("A3: photos", () => {
+  const fixture = (name: string) => new Uint8Array(readFileSync(new URL(`./fixtures/${name}`, import.meta.url)));
+  // A segment: FF, marker, 2-byte length, payload.
+  const seg = (marker: number, payload: string) => {
+    const body = new TextEncoder().encode(payload);
+    return new Uint8Array([0xff, marker, (body.length + 2) >> 8, (body.length + 2) & 0xff, ...body]);
+  };
+  const insertAfterSoi = (jpeg: Uint8Array, ...segs: Uint8Array[]) => new Uint8Array([0xff, 0xd8, ...segs.flatMap((s) => [...s]), ...jpeg.subarray(2)]);
+
+  it("crops to a centred 4:5 and never upscales", () => {
+    expect(cropTo45(4032, 3024)).toEqual({ originX: 806, originY: 0, width: 2419, height: 3024 }); // landscape
+    expect(cropTo45(3024, 4032)).toEqual({ originX: 0, originY: 126, width: 3024, height: 3780 }); // 3:4 portrait
+    expect(cropTo45(1080, 1350)).toEqual({ originX: 0, originY: 0, width: 1080, height: 1350 }); // already 4:5
+    expect(cropTo45(1000, 2000)).toEqual({ originX: 0, originY: 375, width: 1000, height: 1250 });
+    expect(resizeFor({ width: 3024, height: 3780 })).toEqual({ width: 1280, height: PHOTO.longEdge });
+    expect(resizeFor({ width: 800, height: 1000 })).toEqual({ width: 800, height: 1000 });
+    expect(() => cropTo45(0, 10)).toThrow();
+  });
+
+  it("A3 done when: no upload keeps location data (camera-style EXIF, XMP and comments)", () => {
+    for (const name of ["gps.jpg", "gps-progressive.jpg"]) {
+      const original = fixture(name);
+      expect(jpegMetadata(original)).toMatchObject({ exif: true, gps: true });
+      const clean = stripJpegMetadata(original);
+      expect(jpegMetadata(clean)).toEqual({ exif: false, gps: false, xmp: false, iptc: false, comment: false, trailing: false });
+      expect(hasPrivateMetadata(jpegMetadata(clean))).toBe(false);
+      expect([...clean.subarray(0, 2)]).toEqual([0xff, 0xd8]);
+      expect([...clean.subarray(-2)]).toEqual([0xff, 0xd9]);
+      expect(stripJpegMetadata(clean)).toEqual(clean); // nothing left to remove
+      expect(new TextDecoder("latin1").decode(clean)).not.toMatch(/PhoneMaker|PhoneModel|Example St|GPS/);
+    }
+    expect(jpegMetadata(fixture("gps.jpg"))).toMatchObject({ xmp: true, comment: true });
+  });
+
+  it("keeps the colour profile, drops other app data and anything after the picture", () => {
+    const base = stripJpegMetadata(fixture("gps.jpg"));
+    const withExtras = new Uint8Array([
+      ...insertAfterSoi(base, seg(0xe2, "ICC_PROFILE\0\x01\x01profile"), seg(0xe2, "MPF\0secondary"), seg(0xed, "Photoshop 3.0\0iptc"), seg(0xe9, "vendor")),
+      ...[0x00, 0x11, 0x22, 0xff, 0xd8, 0xff, 0xd9], // a second picture tacked on the end
+    ]);
+    const r = jpegMetadata(withExtras);
+    expect(r).toMatchObject({ iptc: true, trailing: true });
+    const clean = stripJpegMetadata(withExtras);
+    expect(jpegMetadata(clean)).toMatchObject({ iptc: false, trailing: false });
+    const text = new TextDecoder("latin1").decode(clean);
+    expect(text).toContain("ICC_PROFILE");
+    expect(text).not.toMatch(/MPF|Photoshop|vendor/);
+    expect(clean.length).toBe(base.length + seg(0xe2, "ICC_PROFILE\0\x01\x01profile").length);
+  });
+
+  it("refuses anything that isn't a whole JPEG", () => {
+    const good = fixture("gps.jpg");
+    expect(() => stripJpegMetadata(new TextEncoder().encode("not a photo"))).toThrow(/not a JPEG/);
+    expect(() => stripJpegMetadata(good.subarray(0, 300))).toThrow();
+    expect(() => stripJpegMetadata(good.subarray(0, good.length - 2))).toThrow(/end-of-image/);
+  });
+
+  it("puts each photo in the teen's own folder, and records it through make.record", () => {
+    expect(makePath("t-1", "m-2")).toBe("t-1/m-2.jpg");
+    expect(MAKE_UPLOAD_WINDOW_HOURS).toBe(48);
+    const ok = { makeId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", questId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a12", capturedAt: "2026-11-01T08:00:00-07:00" };
+    expect(Api["make.record"].input.safeParse(ok).success).toBe(true);
+    expect(Api["make.record"].input.safeParse({ ...ok, capturedAt: "yesterday" }).success).toBe(false);
   });
 });

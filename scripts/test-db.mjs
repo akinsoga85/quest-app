@@ -107,11 +107,10 @@ scenario("a teen sees only their own profile and makes", async () => {
   assert.equal(await count("select count(*) n from makes where teen_id = $1", [B]), 0);
 });
 
-scenario("a teen can add makes only for themselves, only as uploaded, only in their folder", async ({ quest }) => {
+scenario("makes stay in the teen's own folder; the app adds them only through record_make (A3)", async ({ quest }) => {
   await as(A);
-  await q("insert into makes (teen_id, quest_id, storage_path) values ($1::uuid, $2, $1::text || '/new.jpg')", [A, quest]);
-  await rejects("insert into makes (teen_id, quest_id, storage_path) values ($1::uuid, $2, $1::text || '/x.jpg')", [B, quest], /row-level security/);
-  await rejects("insert into makes (teen_id, quest_id, storage_path, status) values ($1::uuid, $2, $1::text || '/y.jpg', 'reviewed')", [A, quest], /row-level security/);
+  await rejects("insert into makes (teen_id, quest_id, storage_path) values ($1::uuid, $2, $1::text || '/new.jpg')", [A, quest], /permission denied/);
+  await asAdmin();
   await rejects("insert into makes (teen_id, quest_id, storage_path) values ($1, $2, $3 || '/z.jpg')", [A, quest, B], /path_in_teen_folder/);
 });
 
