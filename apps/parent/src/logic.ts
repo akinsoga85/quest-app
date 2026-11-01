@@ -2,11 +2,14 @@ import { CHEER_LABELS, Cheer, ZONES, levelFor, type ParentOverview, type ZoneId 
 
 // Pure logic for the parent page, kept apart so it's unit-tested.
 
-export type Route = { page: "consent"; token: string } | { page: "home" };
+export type Route = { page: "consent"; token: string } | { page: "delete" } | { page: "home" };
 
 export function route(pathname: string, search: string): Route {
   const token = new URLSearchParams(search).get("t");
-  if (pathname.replace(/\/+$/, "") === "/consent" && token) return { page: "consent", token };
+  const path = pathname.replace(/\/+$/, "");
+  if (path === "/consent" && token) return { page: "consent", token };
+  // The web deletion link the Google Play listing asks for (A11).
+  if (path === "/delete") return { page: "delete" };
   return { page: "home" };
 }
 

@@ -1,4 +1,4 @@
-import { DELETION_DAYS, type DataExport, type DeletionRequest } from "@quest/contract";
+import { DELETION_DAYS, type DeletionRequest } from "@quest/contract";
 
 // Settings (H20a): the pure parts, tested in settings.test.ts.
 
@@ -29,28 +29,4 @@ export function deletionLine(req: DeletionRequest): string {
 
 export const DELETE_FOOTNOTE = `Deleting removes your account and all your work within ${DELETION_DAYS} days. You have 7 days to change your mind.`;
 
-// "quest-BlueFox-482-2026-11-01.json"
-export function exportFileName(handle: string, exportedAt: string): string {
-  const safe = handle.replace(/[^A-Za-z0-9-]/g, "");
-  return `quest-${safe || "export"}-${exportedAt.slice(0, 10)}.json`;
-}
-
-// Short-lived links last this long, so there's time to save the photos.
-export const PHOTO_LINK_SECONDS = 7 * 24 * 60 * 60;
-
-// The storage paths of the teen's photos in an export.
-export function photoPaths(data: DataExport): string[] {
-  const makes = Array.isArray(data.makes) ? (data.makes as { storagePath?: unknown }[]) : [];
-  return makes.map((m) => m.storagePath).filter((p): p is string => typeof p === "string");
-}
-
-// Adds a link to each photo, and says how long the links last. Storage paths
-// stay out of the file: they're internal.
-export function withPhotoLinks(data: DataExport, links: Record<string, string>): DataExport {
-  if (!Array.isArray(data.makes)) return data;
-  const makes = (data.makes as Record<string, unknown>[]).map(({ storagePath, ...m }) => ({
-    ...m,
-    photo: typeof storagePath === "string" ? (links[storagePath] ?? null) : null,
-  }));
-  return { ...data, makes, photoLinksExpire: new Date(Date.parse(data.exportedAt) + PHOTO_LINK_SECONDS * 1000).toISOString() };
-}
+export { PHOTO_LINK_SECONDS, exportFileName, photoPaths, withPhotoLinks } from "@quest/contract";

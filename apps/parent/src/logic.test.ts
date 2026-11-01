@@ -7,6 +7,7 @@ describe("parent page", () => {
     expect(route("/consent/", "?t=abc")).toEqual({ page: "consent", token: "abc" });
     expect(route("/consent", "")).toEqual({ page: "home" });
     expect(route("/", "")).toEqual({ page: "home" });
+    expect(route("/delete/", "")).toEqual({ page: "delete" });
   });
 
   it("shows the teen's strongest zone and level", () => {

@@ -10,7 +10,8 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | Path | What it is |
 |---|---|
 | `apps/mobile` | Expo (React Native) app: one codebase for iPhone and Android |
-| `apps/parent` | The parent page (A8): consent and what the teen sends, a small React web app on the same backend |
+| `apps/parent` | The parent page (A8): consent and what the teen sends, a small React web app on the same backend; `/delete` for downloading data and deleting an account (A11) |
+| `apps/admin` | The admin site (A11), staff only: safety queue, quest weeks, coach spot check, deletions |
 | `packages/tokens` | Colours, type, spacing and tap sizes from Figma, with contrast tests |
 | `packages/contract` | The shared contract: data shapes, rules and server-function signatures, plus generated database types |
 | `supabase/migrations` | Database schema with row-level security on every table |
@@ -18,11 +19,13 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
 | `packages/notify` | The evening drop (A10): who's due, Expo pushes, quiet hours |
+| `packages/ops` | The account deletion job (A11): stops web Plus, empties the photo folder, deletes the account |
 | `packages/payments` | Plus and payments (A9): RevenueCat and Stripe webhooks, Stripe Checkout and the manage page |
 | `packages/quests` | The quest writer agent (A6): curriculum, Claude writer with rule checks, weekly job |
 | `packages/safety` | The child-safety scan (A5): hash match, classifier, decision and server worker |
-| `supabase/functions` | Edge functions (the safety scan and the coach), bundled from `packages/safety` and `packages/coach` |
+| `supabase/functions` | Edge functions bundled from the packages by `npm run build:functions` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
+| `docs/operations.md` | How staff run things: the safety queue, quest weeks, the coach spot check, deletions |
 
 ## Run it
 
@@ -57,6 +60,23 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## Admin and operations (A11)
+
+- **Settings (H20a)** in the app: Download my work (a JSON file with week-long
+  links to each photo) and Delete my account (7 days to change your mind,
+  finished within 30). Apple and Google both require deleting from the app.
+- **`/delete` on the parent site**: the same for parents, and for teens on the
+  web. Use it as the account deletion link in the Google Play listing.
+- **The admin site** (`apps/admin`): a static Vite + React site. Copy
+  `.env.example` to `.env`, `npm run build -w @quest/admin`, and host `dist/`
+  somewhere only staff know about (it's `noindex`); every function behind it
+  checks the `staff` table. Add staff as in `docs/operations.md`, and turn on
+  Google sign-in for the site's URL in Supabase.
+- **The deletion job**: `npm run build:functions`, `supabase functions deploy
+  account-deletions --no-verify-jwt`, set `DELETIONS_WEBHOOK_SECRET` (and
+  `STRIPE_SECRET_KEY` once Plus is sold on the web), and add a daily schedule
+  that POSTs with the header `x-deletions-secret`.
 
 ## The evening drop (A10)
 

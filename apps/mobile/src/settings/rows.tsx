@@ -20,18 +20,19 @@ type RowProps = {
   onPress?: () => void;
   danger?: boolean;
   first?: boolean; // no divider above the first row
+  chevron?: boolean; // › on rows that open something (not on Sign out)
   accessibilityHint?: string;
 };
 
 // A row is a button only when it does something; then it shows ›.
-export function SettingsRow({ label, value, onPress, danger, first, accessibilityHint }: RowProps) {
+export function SettingsRow({ label, value, onPress, danger, first, chevron = true, accessibilityHint }: RowProps) {
   const inner = (
     <>
       <Text variant="label" color={danger ? "danger" : "text"} style={{ flexShrink: 1 }}>
         {label}
       </Text>
       <Text variant="bodySmall" color="text2" style={styles.value} numberOfLines={2}>
-        {[value, onPress ? "›" : null].filter(Boolean).join("  ")}
+        {[value, onPress && chevron ? "›" : null].filter(Boolean).join("  ")}
       </Text>
     </>
   );

@@ -20,6 +20,8 @@ jobs:
       - run: npm test
       - name: Parent page builds
         run: npm run build -w @quest/parent
+      - name: Admin site builds
+        run: npm run build -w @quest/admin
       - name: Edge functions bundle and run
         run: npm run build:functions && node scripts/check-coach-bundle.mjs && node scripts/check-scan-bundle.mjs && node scripts/check-writer-bundle.mjs && node scripts/check-payments-bundle.mjs && node scripts/check-drop-bundle.mjs && node scripts/check-deletions-bundle.mjs
 

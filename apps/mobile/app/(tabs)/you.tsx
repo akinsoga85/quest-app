@@ -140,7 +140,7 @@ export default function You() {
           value={teen?.aiCoachConsent ? "On" : "Off"}
           onPress={teen?.aiCoachConsent ? coachOff : () => router.push("/ai-consent")}
         />
-        <SettingsRow label="Who sees my work" value="Only you, and family you send to" />
+        <SettingsRow label="Who sees my work" value="You, and family you send to" />
         <SettingsRow label="Download my work" value={downloading ? "Gathering…" : "Photos and reviews"} onPress={() => void download()} accessibilityHint="Saves a file with your photos, reviews and levels" />
       </SettingsSection>
 
@@ -152,7 +152,7 @@ export default function You() {
           value={linked ? "Connected" : waiting ? "Waiting for a yes" : "Send a link"}
           onPress={linked ? undefined : () => router.push("/invite-parent")}
         />
-        <SettingsRow label="Sign out" onPress={() => void signOut()} />
+        <SettingsRow label="Sign out" chevron={false} onPress={() => void signOut()} />
         {deletion ? null : <SettingsRow danger label="Delete my account" onPress={() => router.push("/delete-account")} />}
       </SettingsSection>
 

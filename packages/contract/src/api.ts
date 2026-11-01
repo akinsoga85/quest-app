@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AdminWeek, DataExport, DeletionRequest, Grade, QueueItem, SafetyResolution, SpotCheckItem } from "./admin";
+import { AdminDeletion, AdminWeek, DataExport, DeletionRequest, Grade, QueueItem, SafetyResolution, SpotCheckItem } from "./admin";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { ReviewState } from "./review";
 import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } from "./family";
@@ -258,6 +258,7 @@ export const Api = {
   "admin.resolveSafety": { owner: "A11", rpc: "admin_resolve_safety", input: z.object({ itemId: z.uuid(), resolution: SafetyResolution }), output: z.string().nullable() },
   "admin.spotCheck": { owner: "A11", rpc: "admin_spot_check", input: z.object({ weekOf: z.iso.date() }), output: z.array(SpotCheckItem) },
   "admin.grade": { owner: "A11", rpc: "admin_grade_review", input: Grade, output: z.object({ ok: z.literal(true) }) },
+  "admin.deletions": { owner: "A11", rpc: "admin_deletions", input: z.object({}), output: z.array(AdminDeletion) },
 } as const;
 
 export type ApiName = keyof typeof Api;
