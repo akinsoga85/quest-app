@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Quest",
+    "slug": "quest-app",
+    "scheme": "quest",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F0F11",
+    "ios": {
+      "bundleIdentifier": "com.example.quest",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take the photo for your daily quest. The camera opens only when you tap it.",
+        "NSPhotoLibraryUsageDescription": "Pick a photo for your daily quest. Only the photo you choose is shared with the app."
+      }
+    },
+    "android": {
+      "package": "com.example.quest"
+    },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}

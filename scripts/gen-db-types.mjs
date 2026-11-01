@@ -1,0 +1,140 @@
+// Generates packages/contract/src/database.types.ts from the live schema, in
+// the shape supabase-js expects. Works on plain Postgres, so it runs locally
+// and in CI without Docker. Run after any migration: `npm run gen:types`.
+import { writeFileSync } from "node:fs";
+import pg from "pg";
+
+const url = process.env.DATABASE_URL ?? "postgres://postgres@127.0.0.1:54329/quest";
+const out = new URL("../packages/contract/src/database.types.ts", import.meta.url);
+const db = new pg.Client({ connectionString: url });
+await db.connect();
+
+const enums = (
+  await db.query(`
+    select t.typname as name, array_agg(e.enumlabel::text order by e.enumsortorder) as labels
+    from pg_type t
+    join pg_enum e on e.enumtypid = t.oid
+    join pg_namespace n on n.oid = t.typnamespace
+    where n.nspname = 'public'
+    group by t.typname
+    order by t.typname`)
+).rows;
+const enumNames = new Set(enums.map((e) => e.name));
+
+const columns = (
+  await db.query(`
+    select c.table_name, t.table_type, c.column_name, c.data_type, c.udt_name, c.is_nullable,
+           c.column_default, c.is_identity, c.is_generated
+    from information_schema.columns c
+    join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name
+    where c.table_schema = 'public'
+    order by c.table_name, c.ordinal_position`)
+).rows;
+
+const fks = (
+  await db.query(`
+    select con.conname as name, rel.relname as table_name, frel.relname as ref_table,
+           array_agg(att.attname::text order by k.ord) as cols,
+           array_agg(fatt.attname::text order by k.ord) as ref_cols,
+           exists (
+             select 1 from pg_index i
+             where i.indrelid = con.conrelid and i.indisunique and i.indpred is null
+               and (select array_agg(a order by a) from unnest(i.indkey::int2[]) a)
+                 = (select array_agg(a order by a) from unnest(con.conkey) a)
+           ) as one_to_one
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace n on n.oid = rel.relnamespace
+    join pg_class frel on frel.oid = con.confrelid
+    join pg_namespace fn on fn.oid = frel.relnamespace
+    cross join lateral unnest(con.conkey, con.confkey) with ordinality as k(attnum, fattnum, ord)
+    join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
+    join pg_attribute fatt on fatt.attrelid = con.confrelid and fatt.attnum = k.fattnum
+    where con.contype = 'f' and n.nspname = 'public' and fn.nspname = 'public'
+    group by con.conname, rel.relname, frel.relname, con.conrelid, con.conkey
+    order by con.conname`)
+).rows;
+await db.end();
+
+const base = (udt) => {
+  if (enumNames.has(udt)) return `Database["public"]["Enums"]["${udt}"]`;
+  switch (udt) {
+    case "int2": case "int4": case "int8": case "float4": case "float8": case "numeric":
+      return "number";
+    case "bool":
+      return "boolean";
+    case "json": case "jsonb":
+      return "Json";
+    default:
+      return "string";
+  }
+};
+const tsType = (c) => (c.data_type === "ARRAY" ? `${base(c.udt_name.slice(1))}[]` : base(c.udt_name));
+
+const byTable = new Map();
+for (const c of columns) {
+  if (!byTable.has(c.table_name)) byTable.set(c.table_name, { type: c.table_type, cols: [] });
+  byTable.get(c.table_name).cols.push(c);
+}
+
+const ind = (n) => "  ".repeat(n);
+const relationships = (table, depth) => {
+  const rels = fks.filter((f) => f.table_name === table);
+  if (!rels.length) return "[]";
+  const items = rels.map(
+    (f) =>
+      `${ind(depth + 1)}{\n` +
+      `${ind(depth + 2)}foreignKeyName: "${f.name}"\n` +
+      `${ind(depth + 2)}columns: [${f.cols.map((x) => `"${x}"`).join(", ")}]\n` +
+      `${ind(depth + 2)}isOneToOne: ${f.one_to_one}\n` +
+      `${ind(depth + 2)}referencedRelation: "${f.ref_table}"\n` +
+      `${ind(depth + 2)}referencedColumns: [${f.ref_cols.map((x) => `"${x}"`).join(", ")}]\n` +
+      `${ind(depth + 1)}},`,
+  );
+  return `[\n${items.join("\n")}\n${ind(depth)}]`;
+};
+
+const lines = [];
+const emitRelation = (name, { cols }, isView) => {
+  lines.push(`${ind(3)}${name}: {`);
+  lines.push(`${ind(4)}Row: {`);
+  for (const c of cols) lines.push(`${ind(5)}${c.column_name}: ${tsType(c)}${c.is_nullable === "YES" ? " | null" : ""}`);
+  lines.push(`${ind(4)}}`);
+  if (!isView) {
+    lines.push(`${ind(4)}Insert: {`);
+    for (const c of cols) {
+      const optional = c.is_nullable === "YES" || c.column_default !== null || c.is_identity === "YES" || c.is_generated === "ALWAYS";
+      lines.push(`${ind(5)}${c.column_name}${optional ? "?" : ""}: ${tsType(c)}${c.is_nullable === "YES" ? " | null" : ""}`);
+    }
+    lines.push(`${ind(4)}}`);
+    lines.push(`${ind(4)}Update: {`);
+    for (const c of cols) lines.push(`${ind(5)}${c.column_name}?: ${tsType(c)}${c.is_nullable === "YES" ? " | null" : ""}`);
+    lines.push(`${ind(4)}}`);
+  }
+  lines.push(`${ind(4)}Relationships: ${relationships(name, 4)}`);
+  lines.push(`${ind(3)}}`);
+};
+
+lines.push("// Generated by scripts/gen-db-types.mjs from the migrations. Do not edit by hand.");
+lines.push("");
+lines.push("export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]");
+lines.push("");
+lines.push("export type Database = {");
+lines.push(`${ind(1)}public: {`);
+lines.push(`${ind(2)}Tables: {`);
+for (const [name, t] of byTable) if (t.type === "BASE TABLE") emitRelation(name, t, false);
+lines.push(`${ind(2)}}`);
+lines.push(`${ind(2)}Views: {`);
+for (const [name, t] of byTable) if (t.type === "VIEW") emitRelation(name, t, true);
+lines.push(`${ind(2)}}`);
+lines.push(`${ind(2)}Functions: { [_ in never]: never }`);
+lines.push(`${ind(2)}Enums: {`);
+for (const e of enums) lines.push(`${ind(3)}${e.name}: ${e.labels.map((l) => `"${l}"`).join(" | ")}`);
+lines.push(`${ind(2)}}`);
+lines.push(`${ind(2)}CompositeTypes: { [_ in never]: never }`);
+lines.push(`${ind(1)}}`);
+lines.push("}");
+lines.push("");
+
+writeFileSync(out, lines.join("\n"));
+console.log(`wrote ${out.pathname} (${byTable.size} tables and views, ${enums.length} enums)`);

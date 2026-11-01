@@ -1,0 +1,48 @@
+# Building with AI agents
+
+A0 (this foundation) is done. Packages A1–A12 can now be built in parallel, one
+agent each. Every package builds against the contract in `packages/contract`
+and the schema in `supabase/migrations`, so each one runs and is tested on its own.
+
+## Rules for every agent
+
+1. One package per agent, on its own branch (`a3-capture`), with the brief below.
+2. Talk to other packages only through the contract: `Api` in
+   `packages/contract/src/api.ts`, the shared types, and the database. Changing
+   the contract or a migration is its own reviewed change, never part of a package.
+3. Test keys only. Never production secrets or real teen data.
+4. Write the done-when checks as tests first. A merge needs green CI: types,
+   lint, unit tests, database tests, and both app bundles.
+5. A human reviews every change to safety, consent, payments or data deletion
+   (A1, A5, A9, A11) line by line.
+6. Text sizes, colours and tap sizes come from `@quest/tokens`; screens use
+   `Screen`, `Text` and `Button` from `apps/mobile/src/ui`, so text scales and
+   tap targets stay at 44 pt (iOS) and 48 dp (Android).
+
+## Package briefs
+
+| ID | Package | Owns (contract and tables) | Figma | Done when |
+|---|---|---|---|---|
+| A1 | Sign-up, age and consent | `bracketForAge`, `modeFor`, `needsParentConsent`; `parent.invite`, `ai.consent`; tables `teens`, `parents`, `parent_links` | H1, H2, H3, H14a, H22, H24 | Tests pass at ages 12, 14, 16, 18 and 19 in Canada and the US; under-13s stopped; parent link expires after 7 days; store age signal read on both platforms |
+| A2 | Quests and Today | `Quest`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | One quest per zone at local midnight; weekly streak correct across time zones |
+| A3 | Capture and upload | `make.createUpload`; table `makes`; storage bucket `makes` | H6, H23 | No upload keeps location data; uploads resume after a dropped connection; system photo picker on Android |
+| A4 | Coach agent | `CoachReview`, `coachReviewJsonSchema`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`; tables `reviews`, `skill_points` | H7, H16 | Passes the coach test set (Lean V1 tab: "How we know it's good"); no review without `ai_coach_consent` |
+| A5 | Safety scan | `make.submit`; table `safety_scans` | H8 (safety card) | Test hashes always blocked; flagged items reach the admin queue; nothing reaches the coach unscanned |
+| A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`; drafts into `quests` | — | Drafts a week per zone with zero rule problems; approved in admin |
+| A7 | Portfolio, skills, levels | `levelFor`, `levelledUp`; `review.rate`; view `zone_progress`, table `postcards` | H12, H13, H18 | Level-ups follow the rules; a digital postcard at each level-up |
+| A8 | Family share and parent page | `Cheer`; `family.share`, `family.cheer`; tables `family_shares`, `family_cheers` | H17, H19, H24, H25 | A parent sees only the makes sent to them and can send one cheer back |
+| A9 | Plus and payments | table `entitlements` (webhook only) | H25 | Buy, renew, cancel and refund on both stores and the web; under-18 purchases need a parent's approval |
+| A10 | Evening drop and notifications | table `notification_prefs` | H11, H19 | Drop at 8 pm local time; no pushes during quiet hours |
+| A11 | Admin and operations | `account.export`, `account.delete`, `DELETION_DAYS`; table `deletion_requests` | H20a, H21 | Quest approval, safety queue, 1% coach spot check, deletion and export all work |
+| A12 | Store release | `apps/mobile/app.json` | — | Listings, privacy labels and age ratings done; internal testing on both stores |
+
+## Already enforced by the database
+
+`npm run db:test` proves these, so packages don't need to re-check them:
+
+- Signed-out users read nothing; each teen sees only their own rows.
+- Teens can't change their age bracket, mode or handle, or write reviews.
+- A make can be shared only after it's reviewed, and only with an actively linked parent.
+- A parent sees only the makes sent to them; only that parent can cheer.
+- At most three zones per teen, only open zones; skill points must match the review's zone.
+- Deleting an account removes the teen's data and keeps the deletion record.

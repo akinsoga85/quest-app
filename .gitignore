@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+dist-check/
+web-build/
+*.log
+.env
+.env.local
+.pgdata/
+coverage/
+ios/
+android/
