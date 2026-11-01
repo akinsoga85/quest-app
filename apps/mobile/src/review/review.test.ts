@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { helplines, makeStatusLabel, pollDelay, skillChips } from "./logic";
+import { familyLine, familyNames, helplines, makeStatusLabel, pollDelay, skillChips } from "./logic";
 
 describe("coach review screen", () => {
   it("shows a chip for each skill that earned points", () => {
@@ -36,5 +36,15 @@ describe("coach review screen", () => {
     expect(makeStatusLabel("reviewed")).toBe("Review ready");
     expect(makeStatusLabel("blocked")).toBe("With our safety team");
     expect(makeStatusLabel("retake")).toBeNull();
+  });
+});
+
+describe("sending to family", () => {
+  it("names who it goes to, and the cheers back", () => {
+    expect(familyNames([])).toBe("your parent");
+    expect(familyNames([{ name: "Mom" }])).toBe("Mom");
+    expect(familyNames([{ name: "Mom" }, { name: "Dad" }])).toBe("Mom and Dad");
+    expect(familyLine([{ name: "Mom" }], [])).toBe("Sent to Mom");
+    expect(familyLine([{ name: "Mom" }], ["great_light"])).toBe("Sent to Mom · Great light");
   });
 });

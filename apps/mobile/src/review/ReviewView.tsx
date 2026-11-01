@@ -1,4 +1,4 @@
-import { ZONES, lessonById, type ReviewState, type ZoneId } from "@quest/contract";
+import { ZONES, lessonById, type FamilyStatus, type ReviewState, type ZoneId } from "@quest/contract";
 import { colors, minTouch, radius, space, zoneColors } from "@quest/tokens";
 import { useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, Pressable, StyleSheet, View } from "react-native";
@@ -8,7 +8,7 @@ import { ArrowRightIcon, CheckIcon } from "../ui/icons";
 import { ErrorText, InfoRow, StepHeader } from "../ui/parts";
 import { Screen } from "../ui/Screen";
 import { Text } from "../ui/Text";
-import { helplines, skillChips } from "./logic";
+import { familyLine, helplines, skillChips } from "./logic";
 
 interface Props {
   state: ReviewState | null;
@@ -24,13 +24,28 @@ interface Props {
   onDone: () => void;
   onRetry: () => void;
   onDelete?: () => void; // the teen can delete any piece (PRD R36)
+  family?: FamilyStatus | null; // A8: linked parents, whether it was sent, cheers back
+  onSendFamily?: () => void;
 }
 
 // H16 (Studio) / H7: the coach's review, and what's shown while it's coming
 // or when there isn't one.
 export function ReviewView(p: Props) {
   const zoneName = p.zone ? ZONES[p.zone].name : null;
-  const footer = <Button label={p.state?.state === "ready" ? "Save to Studio" : "Done"} variant={p.state?.state === "ready" ? "secondary" : "primary"} onPress={p.onDone} />;
+  const ready = p.state?.state === "ready";
+  const canSend = ready && !!p.family && p.family.parents.length > 0 && !p.family.sent && !!p.onSendFamily;
+  const footer = canSend ? (
+    <View style={{ flexDirection: "row", gap: space.sm }}>
+      <View style={{ flex: 1 }}>
+        <Button label="Save to Studio" variant="secondary" onPress={p.onDone} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Button label="Send to family" onPress={p.onSendFamily!} />
+      </View>
+    </View>
+  ) : (
+    <Button label={ready ? "Save to Studio" : "Done"} variant={ready ? "secondary" : "primary"} onPress={p.onDone} />
+  );
 
   return (
     <Screen title="" header={<StepHeader label="Coach review" />} footer={footer}>
@@ -55,6 +70,11 @@ export function ReviewView(p: Props) {
         </Text>
       ) : null}
       <Body {...p} />
+      {ready && p.family?.sent ? (
+        <Text variant="caption" color="lime" accessibilityLiveRegion="polite">
+          {familyLine(p.family.parents, p.family.cheers)}
+        </Text>
+      ) : null}
       <ErrorText message={p.error} />
       {p.onDelete && p.state && p.state.state !== "pending" && p.state.state !== "held" ? (
         <Pressable accessibilityRole="button" onPress={p.onDelete} style={[styles.delete, { minHeight: minTouch(Platform.OS) }]}>

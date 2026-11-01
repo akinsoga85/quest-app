@@ -17,7 +17,7 @@ export default function ReviewScreen() {
   const { teen } = useAccount();
   const { today, refresh: refreshToday } = useToday();
   const { pending } = useUploads();
-  const { state, photoUrl, stalled, error, rate, retry } = useReview(makeId, teen?.id);
+  const { state, photoUrl, family, stalled, error, rate, retry, loadFamily } = useReview(makeId, teen?.id);
 
   const onToday = today?.zones.find((z) => z.make?.id === makeId);
   const saving = pending.find((p) => p.makeId === makeId);
@@ -27,7 +27,8 @@ export default function ReviewScreen() {
   useFocusEffect(
     useCallback(() => {
       if (state?.state === "no_consent") retry();
-    }, [state?.state, retry]),
+      if (state?.state === "ready") void loadFamily(); // back from sending to family
+    }, [state?.state, retry, loadFamily]),
   );
 
   // A finished review changes points and levels on Today.
@@ -52,6 +53,8 @@ export default function ReviewScreen() {
       onTurnOnCoach={() => router.push("/ai-consent")}
       onDone={() => router.back()}
       onRetry={retry}
+      family={family}
+      onSendFamily={() => router.push({ pathname: "/send-family/[makeId]", params: { makeId } })}
       onDelete={() =>
         Alert.alert("Delete this make?", "The photo and its review are deleted, and its points come off your level. Postcards stay.", [
           { text: "Cancel", style: "cancel" },

@@ -1,4 +1,4 @@
-import { Api, makePath, type ReviewState } from "@quest/contract";
+import { Api, makePath, type FamilyStatus, type ReviewState } from "@quest/contract";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { NOT_SAVED_YET, pollDelay } from "./logic";
@@ -8,6 +8,7 @@ import { NOT_SAVED_YET, pollDelay } from "./logic";
 export function useReview(makeId: string | undefined, teenId: string | undefined) {
   const [state, setState] = useState<ReviewState | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [family, setFamily] = useState<FamilyStatus | null>(null);
   const [stalled, setStalled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const attempt = useRef(0);
@@ -58,6 +59,18 @@ export function useReview(makeId: string | undefined, teenId: string | undefined
       .then(({ data }) => setPhotoUrl(data?.signedUrl ?? null));
   }, [makeId, teenId, state?.state]);
 
+  // Who it can go to, whether it went, and cheers back (A8).
+  const loadFamily = useCallback(async () => {
+    if (!makeId) return;
+    const { data } = await supabase.rpc("get_family_status", { p_make_id: makeId });
+    const parsed = Api["family.status"].output.safeParse(data);
+    if (parsed.success) setFamily(parsed.data);
+  }, [makeId]);
+
+  useEffect(() => {
+    if (state?.state === "ready") void loadFamily();
+  }, [state?.state, loadFamily]);
+
   const rate = useCallback(
     async (helpful: boolean) => {
       if (state?.state !== "ready") return;
@@ -74,5 +87,5 @@ export function useReview(makeId: string | undefined, teenId: string | undefined
     void poll();
   }, [poll]);
 
-  return { state, photoUrl, stalled, error, rate, retry };
+  return { state, photoUrl, family, stalled, error, rate, retry, loadFamily };
 }
