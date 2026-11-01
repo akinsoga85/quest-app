@@ -27,7 +27,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A2 | Quests and Today | `Quest`, `Today`, `localDay`, `weekStart`, `weekDays`, `weeklyStreak`, `MAKING_DAYS_PER_WEEK`; `zones.set`, `today.get` (Postgres functions); `makes.local_day`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | **Built.** Quests appear at local midnight in 13 time zones, including daylight-saving days; the weekly streak matches the contract across time zones and travel |
 | A3 | Capture and upload | `PHOTO`, `cropTo45`, `jpegMetadata`, `stripJpegMetadata`, `makePath`, `MakeStatus`; `make.record` (Postgres function); table `makes`; storage bucket `makes` | H6, H23 | **Built.** Photos lose location and device data on the phone (tested on real GPS JPEGs); the upload queue resumes after dropped connections and restarts; Android uses the system photo picker with broad photo permissions blocked |
 | A4 | Coach agent | `CoachReview`, `CoachContext`, `CoachClaim`, `ReviewState`, `LESSONS`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`, `review.rate` (Postgres functions); `coach_claim`, `coach_save_review`, `coach_save_outcome` (server only); tables `reviews`, `skill_points`, `coach_flags`; `packages/coach` | H7, H16 | **Built.** No review without consent (database and worker tests); every review passes the contract, the deterministic guardrails and a model check, with one rewrite, else a lesson. Left: run `npm run coach -- eval` on the mentors' test set |
-| A5 | Safety scan | `make.submit`; table `safety_scans` | H8 (safety card) | Test hashes always blocked; flagged items reach the admin queue; nothing reaches the coach unscanned |
+| A5 | Safety scan | `ScanResult`, `SafetyLabel`, `SAFETY_THRESHOLDS`, `decideScan`, `ScanClaim`; `scan_claim`, `scan_save`, `scan_pending` (server only); tables `safety_scans`, `safety_queue`; `packages/safety` | H8 (safety card) | **Built.** Test hashes always blocked (and never sent on to the classifier); flagged items and coach concerns reach `safety_queue`; the database refuses `reviewing` without a passing scan. Left: choose the hash-matching and classifier vendors and add their adapters |
 | A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`; drafts into `quests` | — | Drafts a week per zone with zero rule problems; approved in admin |
 | A7 | Portfolio, skills, levels | `levelFor`, `levelledUp`; `review.rate`; view `zone_progress`, table `postcards` | H12, H13, H18 | Level-ups follow the rules; a digital postcard at each level-up |
 | A8 | Family share and parent page | `Cheer`; `family.share`, `family.cheer`; tables `family_shares`, `family_cheers` | H17, H19, H24, H25 | A parent sees only the makes sent to them and can send one cheer back |
@@ -54,9 +54,11 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
   directly. Left: try the camera and picker on real phones.
 - **A4 coach agent:** built on branch `a4-coach` (on top of `a3-capture`). The worker
   reviews makes in `reviewing`; set that status in A5 once the scan passes.
-- **For A5:** new makes arrive as `status = 'uploaded'`. Start the scan from there
-  (a database webhook on `makes` insert, or `make.submit`), and run `jpegMetadata`
-  on the stored bytes before anything else; refuse a photo that still has metadata.
+- **A5 safety scan:** built on branch `a5-safety` (on top of `a4-coach`). It fails
+  closed: with no vendors set up, nothing is scanned and nothing reaches the coach.
+  It also strips any metadata the phone missed from the stored copy.
+- **For A11:** the admin reads `safety_queue` (open items have no `resolved_at`) and
+  resolves them; releasing a held photo means a `pass` scan, then `reviewing`.
 - **For A12:** Expo's template adds `SYSTEM_ALERT_WINDOW` (used by the dev menu);
   consider blocking it in release builds.
 - **For A6 and A11:** a scheduled quest stays hidden until the teen's local midnight on
@@ -73,4 +75,6 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 - A parent sees only the makes sent to them; only that parent can cheer.
 - At most three zones per teen, only open zones; skill points must match the review's zone.
 - Nobody sees a later day's quest before their local midnight; teens' time zones are real IANA names.
+- No make reaches the coach (`reviewing`) without a passing safety scan.
+- No coach review is saved without the teen's consent (and a parent's for under-18s).
 - Deleting an account removes the teen's data and keeps the deletion record.

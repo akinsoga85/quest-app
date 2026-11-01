@@ -16,7 +16,8 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/seed.sql` | Zones, skills and a first day of quests |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
-| `supabase/functions` | Edge functions (the coach), bundled from `packages/coach` |
+| `packages/safety` | The child-safety scan (A5): hash match, classifier, decision and server worker |
+| `supabase/functions` | Edge functions (the safety scan and the coach), bundled from `packages/safety` and `packages/coach` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
 
 ## Run it
@@ -52,6 +53,28 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## The safety scan (A5)
+
+Every photo is scanned on the server before the coach or any person sees it:
+a hash match against known abuse imagery first, then a classifier for sexual
+content, self-harm, violence and similar. Anything matched or flagged is
+blocked or held for a person, and goes into `safety_queue`. The database
+refuses to send a photo to the coach without a passing scan.
+
+**Before real teens use it you must choose and sign up with vendors.** For
+example, Thorn Safer or Microsoft PhotoDNA for hash matching (both need an
+application), and a moderation classifier that covers self-harm (for example
+Hive). Each needs a small adapter in `packages/safety` implementing
+`HashMatcher` or `Classifier`. Until then the function answers 503 and scans
+nothing, so photos wait and nothing reaches the coach. For staging only,
+`SAFETY_VENDORS=test` uses exact-hash matching against `SAFETY_TEST_HASHES`
+and a classifier that flags nothing; every scan records which vendor decided.
+
+To deploy: `npm run build:functions`, `supabase functions deploy safety-scan
+--no-verify-jwt`, set `SAFETY_WEBHOOK_SECRET`, add a database webhook on
+`makes` INSERT (header `x-safety-secret`), and a schedule that POSTs `{}`
+every minute.
 
 ## The coach (A4)
 
