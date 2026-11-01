@@ -15,6 +15,8 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/migrations` | Database schema with row-level security on every table |
 | `supabase/seed.sql` | Zones, skills and a first day of quests |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
+| `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
+| `supabase/functions` | Edge functions (the coach), bundled from `packages/coach` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
 
 ## Run it
@@ -50,6 +52,34 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## The coach (A4)
+
+The coach reviews each photo on the server with Claude (Claude Opus 5.5 writes
+the review; Claude Haiku 5.5 checks it against the guardrails). It only ever
+sees a photo when the teen has said yes to coach reviews, plus a parent for
+under-18s.
+
+```sh
+export ANTHROPIC_API_KEY=...          # every run below calls Claude and costs money
+npm run coach -- review path/to/photos --zone photography --quest "Shadows that tell a story"
+npm run coach -- eval packages/coach/testset/sample --out report.json
+```
+
+`eval` exits with an error unless the test set passes: zero guardrail breaks,
+every hard case right, and 90% of outcomes right. The sample set is drawn
+stand-ins; the mentor sprint adds the real 500-photo set per zone. Change the
+models or effort with `COACH_MODEL`, `COACH_GUARD_MODEL` and `COACH_EFFORT`.
+
+To deploy:
+
+1. `npm run build:functions`, then `supabase functions deploy coach-review --no-verify-jwt`.
+2. `supabase secrets set ANTHROPIC_API_KEY=... COACH_WEBHOOK_SECRET=<random>`.
+3. Database → Webhooks: on `makes` UPDATE, POST to the function's URL with the
+   header `x-coach-secret: <the secret>`. The function only acts on rows whose
+   status is `reviewing` (set by the safety scan, A5).
+4. A schedule (Supabase Cron) that POSTs `{}` to the same URL every minute, to pick up
+   anything missed or waiting for consent.
 
 ## Before the first store build
 

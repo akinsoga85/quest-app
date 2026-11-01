@@ -10,3 +10,4 @@ web-build/
 coverage/
 ios/
 android/
+supabase/functions/*/*.bundle.mjs

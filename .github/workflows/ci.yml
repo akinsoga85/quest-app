@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Coach edge function bundles and runs
+        run: npm run build:functions && node scripts/check-coach-bundle.mjs
 
   database:
     name: Migrations and access rules
