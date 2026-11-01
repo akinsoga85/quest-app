@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MakeStatus } from "./photo";
 import { Quest } from "./quest";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
@@ -75,6 +76,7 @@ export const TodayZone = z.object({
   points: z.number().int().min(0), // coach skill points in this zone, for the level chip
   quest: TodayQuest.nullable(), // null if nothing is scheduled (shouldn't happen once A6 runs)
   madeToday: z.boolean(),
+  make: z.object({ id: z.uuid(), status: MakeStatus }).nullable(), // today's make for this quest, for its review
 });
 export type TodayZone = z.infer<typeof TodayZone>;
 

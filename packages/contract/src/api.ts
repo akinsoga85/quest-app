@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgeBracket, AgeSource, AppMode } from "./age";
-import { CoachReview } from "./review";
+import { ReviewState } from "./review";
 import { Cheer } from "./family";
 import { MakeStatus } from "./photo";
 import { Today } from "./today";
@@ -80,16 +80,14 @@ export const Api = {
   },
   "review.forMake": {
     owner: "A4",
+    rpc: "get_review",
     input: z.object({ makeId: z.uuid() }),
-    output: z.discriminatedUnion("state", [
-      z.object({ state: z.literal("pending") }),
-      z.object({ state: z.literal("ready"), reviewId: z.uuid(), review: CoachReview }),
-      z.object({ state: z.literal("retake"), reason: z.string() }),
-      z.object({ state: z.literal("no_consent") }),
-    ]),
+    output: ReviewState,
   },
   "review.rate": {
-    owner: "A7",
+    owner: "A4",
+    rpc: "rate_review",
+    // "Was this helpful?" on the review screen (H16).
     input: z.object({ reviewId: z.uuid(), helpful: z.boolean() }),
     output: z.object({ ok: z.literal(true) }),
   },
