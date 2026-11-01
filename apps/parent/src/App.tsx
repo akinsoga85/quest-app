@@ -1,7 +1,7 @@
-import { Api, type InvitePreview, type ParentFeedItem, type ParentOverview } from "@quest/contract";
+import { Api, PLUS, type InvitePreview, type ParentFeedItem, type ParentOverview, type ParentPlus } from "@quest/contract";
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
-import { CHEERS, bestZone, questsLine, route, shortDay, signInRedirect } from "./logic";
+import { CHEERS, bestZone, plusLine, questsLine, route, shortDay, signInRedirect } from "./logic";
 import { configured, supabase } from "./supabase";
 
 export function App() {
@@ -173,12 +173,15 @@ function SignIn({ title }: { title: string }) {
 
 function Home({ session }: { session: Session | null }) {
   const [overview, setOverview] = useState<ParentOverview | null>(null);
+  const [plus, setPlus] = useState<ParentPlus>([]);
+  const [paying, setPaying] = useState(false);
   const [feed, setFeed] = useState<ParentFeedItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [o, f] = await Promise.all([supabase.rpc("parent_overview"), supabase.rpc("parent_feed", { p_limit: 20 })]);
+    const [o, f, pl] = await Promise.all([supabase.rpc("parent_overview"), supabase.rpc("parent_feed", { p_limit: 20 }), supabase.rpc("parent_plus")]);
+    setPlus(Api["parent.plus"].output.safeParse(pl.data).data ?? []);
     const po = Api["parent.overview"].output.safeParse(o.data);
     const pf = Api["parent.feed"].output.safeParse(f.data);
     if (o.error || f.error || !po.success || !pf.success) {
@@ -208,6 +211,20 @@ function Home({ session }: { session: Session | null }) {
       </main>
     );
   }
+
+  // Plus is bought here, by a parent, for each linked teen (Stripe).
+  const startPlus = async (teenId: string, path: "checkout" | "portal") => {
+    setPaying(true);
+    setError(null);
+    const { data, error: e } = await supabase.functions.invoke(`payments/${path}`, { body: path === "checkout" ? { teenId } : {} });
+    const url = (data as { url?: string } | null)?.url;
+    if (e || !url) {
+      setError("Couldn't open the payment page. Try again later.");
+      setPaying(false);
+      return;
+    }
+    window.location.assign(url);
+  };
 
   const cheer = async (shareId: string, value: string) => {
     const { error: e } = await supabase.rpc("cheer_share", { p_share_id: shareId, p_cheer: value as ParentFeedItem["cheer"] & string });
@@ -258,6 +275,7 @@ function Home({ session }: { session: Session | null }) {
               </div>
               {!t.coachOn ? <p className="muted small">Only your teen can turn it back on, from the app.</p> : null}
             </div>
+            <PlusCard status={plus.find((p) => p.teenId === t.teenId) ?? null} busy={paying} onStart={() => void startPlus(t.teenId, "checkout")} onManage={() => void startPlus(t.teenId, "portal")} />
           </section>
         );
       })}
@@ -326,5 +344,42 @@ function GoogleLogo() {
       <path fill="#FBBC05" d="M10.6 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.3.8-4.7l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.9l7.9-6.2z" />
       <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z" />
     </svg>
+  );
+}
+
+function PlusCard({ status, busy, onStart, onManage }: { status: ParentPlus[number] | null; busy: boolean; onStart: () => void; onManage: () => void }) {
+  return (
+    <section className="card" aria-labelledby="plus">
+      <h2 id="plus">Plus</h2>
+      {status?.active ? (
+        <>
+          <p className="text2">{plusLine(status.until, status.source)}</p>
+          {status.source === "web" ? (
+            <button className="btn" disabled={busy} onClick={onManage}>
+              Manage or cancel
+            </button>
+          ) : (
+            <p className="muted small">Bought in the app store: manage it in that store's subscriptions.</p>
+          )}
+        </>
+      ) : (
+        <>
+          <ul className="list">
+            {PLUS.perks.map((p) => (
+              <li key={p}>
+                <span className="tick" aria-hidden>✓</span>
+                {p}
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">
+            ${PLUS.monthlyUsd} a month per teen · extra teens ${PLUS.extraTeenUsd} (prices to test). Cancel any time.
+          </p>
+          <button className="btn primary" disabled={busy} onClick={onStart}>
+            Start Plus
+          </button>
+        </>
+      )}
+    </section>
   );
 }

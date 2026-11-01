@@ -1,6 +1,6 @@
-import { DELETION_DAYS, ZONES } from "@quest/contract";
-import { router } from "expo-router";
-import { useState } from "react";
+import { Api, DELETION_DAYS, ZONES, type PlusStatus } from "@quest/contract";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { pendingInvite, useAccount } from "../../src/lib/account";
 import { signOut } from "../../src/lib/auth";
 import { supabase } from "../../src/lib/supabase";
@@ -16,6 +16,13 @@ const BRACKET_LABEL = { "13_15": "13–15", "16_17": "16–17", "18_19": "18–1
 export default function You() {
   const { teen, parentLinks, zones, refresh } = useAccount();
   const [error, setError] = useState<string | null>(null);
+  const [plus, setPlus] = useState<PlusStatus | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      void supabase.rpc("plus_status").then(({ data }) => setPlus(Api["plus.status"].output.safeParse(data).data ?? null));
+    }, []),
+  );
   const linked = parentLinks.some((l) => l.status === "active");
   const waiting = pendingInvite(parentLinks) !== null;
 
@@ -41,6 +48,17 @@ export default function You() {
           {zones.map((z) => ZONES[z].name).join(", ") || "None picked yet."} Swap any time; your levels stay.
         </Text>
         <Button label="Change zones" variant="secondary" onPress={() => router.push("/edit-zones")} />
+      </Card>
+
+      <Card>
+        <Text variant="label">Plus</Text>
+        <Text variant="bodySmall" color="text2">
+          {plus?.active
+            ? `On${plus.until ? ` until ${plus.until.slice(0, 10)}` : ""}: deeper coaching and a second take on each quest.`
+            : plus?.canBuyInApp
+              ? "Deeper coaching and a second take on each quest. Plus in the app arrives with the store release."
+              : "Deeper coaching and a second take on each quest. A parent can start Plus on their parent page."}
+        </Text>
       </Card>
 
       <Card>

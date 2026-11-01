@@ -31,7 +31,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`, `weekRuleProblems`; `save_quest_week`, `approve_quest_week`, `reject_quest_week`, `weeks_to_draft`, `recent_quest_titles` (server only); table `quest_weeks`; `packages/quests` | — | **Built.** Drafts a week per zone with zero rule problems (one rewrite, never saved with problems); an approved week is scheduled Monday to Sunday, with a repeat quest every fourth week. Left: the admin approval screen (A11) and the mentors' curriculum |
 | A7 | Portfolio, skills, levels | `levelFor`, `levelledUp`, `skillScore`, `ZoneLevel`, `StudioPage`, `NewPostcard`; `levels.get`, `studio.list`, `postcards.new/seen/pick`, `make.delete` (Postgres functions); view `zone_progress`, table `postcards` | H12, H13, H18 | **Built.** Points are quests finished plus coach skill points (R32); level-ups follow `levelFor` (database parity test); a postcard at each level reached, made by the database |
 | A8 | Family share and parent page | `Cheer`, `FamilyStatus`, `ParentFeedItem`, `ParentOverview`; `family.share`, `family.status`, `family.cheer`, `parent.preview`, `parent.consent`, `parent.feed`, `parent.overview`, `parent.weeklyEmail` (Postgres functions); tables `family_shares`, `family_cheers`; `apps/parent` | H17, H19, H24, H25 | **Built.** A parent sees only the makes sent to them, only while linked, and can send one of five cheers per make; consent needs the parent to confirm they're an adult. Left: the card check (A9), the evening drop's family cheers (A10) |
-| A9 | Plus and payments | table `entitlements` (webhook only) | H25 | Buy, renew, cancel and refund on both stores and the web; under-18 purchases need a parent's approval |
+| A9 | Plus and payments | `PLUS`, `canBuyInApp`, `EntitlementEvent`, `fromRevenueCat`, `fromStripe`, `PlusStatus`; `plus.status`, `parent.plus` (Postgres functions); `plus.checkout`, `plus.portal` (edge function `payments`); tables `entitlements`, `entitlement_events`, `billing_customers`; `packages/payments` | H25 | **Built.** Buy, renew, cancel and refund tested for App Store, Google Play and the web, each event applied once; under-18s buy only through a linked parent. Left: Stripe and RevenueCat accounts, sandbox runs, and the in-app purchase screen for 18–19s |
 | A10 | Evening drop and notifications | table `notification_prefs` | H11, H19 | Drop at 8 pm local time; no pushes during quiet hours |
 | A11 | Admin and operations | `account.export`, `account.delete`, `DELETION_DAYS`; table `deletion_requests` | H20a, H21 | Quest approval, safety queue, 1% coach spot check, deletion and export all work |
 | A12 | Store release | `apps/mobile/app.json` | — | Listings, privacy labels and age ratings done; internal testing on both stores |
@@ -62,8 +62,9 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
   Studio and Levels tabs, the level-up postcard, and deleting a make.
 - **A8 family and parent page:** built on branch `a8-family` (on top of `a7-levels`).
   The teen's "Send to family" sheet, and `apps/parent` (consent and parent page).
-- **For A9:** replace the consent page's adult statement with the card check and
-  record `parents.adult_check = 'card_verified'`.
+- **A9 Plus:** built on branch `a9-plus` (on top of `a8-family`). Still open: the card
+  check for consent (a $0 Stripe SetupIntent, recorded as `parents.adult_check =
+  'card_verified'`) and the in-app purchase screen.
 - **For A11:** list draft weeks from `quest_weeks` with their quests; approve with
   `approve_quest_week(week_id, staff)` or reject with `reject_quest_week`.
 - **For A11 (safety):** the admin reads `safety_queue` (open items have no `resolved_at`) and
