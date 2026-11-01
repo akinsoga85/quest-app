@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { ReviewState } from "./review";
-import { Cheer } from "./family";
+import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } from "./family";
 import { NewPostcard, StudioPage, ZoneLevel } from "./levels";
 import { MakeStatus } from "./photo";
 import { Today } from "./today";
@@ -129,12 +129,54 @@ export const Api = {
   },
   "family.share": {
     owner: "A8",
+    rpc: "share_with_family",
+    // Sends a reviewed make to every actively linked parent. Returns how many.
     input: z.object({ makeId: z.uuid() }),
-    output: z.object({ shareId: z.uuid() }),
+    output: z.number().int().min(0),
+  },
+  "family.status": {
+    owner: "A8",
+    rpc: "get_family_status",
+    input: z.object({ makeId: z.uuid() }),
+    output: FamilyStatus,
   },
   "family.cheer": {
     owner: "A8",
+    rpc: "cheer_share",
+    // A parent sends back one of five cheers, once per share. No free text.
     input: z.object({ shareId: z.uuid(), cheer: Cheer }),
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "parent.preview": {
+    owner: "A8",
+    rpc: "invite_preview",
+    // Works signed out: the consent page shows whose invite it is.
+    input: z.object({ token: z.string() }),
+    output: InvitePreview,
+  },
+  "parent.consent": {
+    owner: "A8",
+    rpc: "give_parent_consent",
+    // Confirms the parent is an adult, then accepts the invite.
+    input: z.object({ token: z.string(), isAdult: z.literal(true) }),
+    output: z.object({ teenHandle: z.string() }),
+  },
+  "parent.feed": {
+    owner: "A8",
+    rpc: "parent_feed",
+    input: z.object({ before: z.string().nullable(), limit: z.number().int().min(1).max(50) }),
+    output: z.array(ParentFeedItem),
+  },
+  "parent.overview": {
+    owner: "A8",
+    rpc: "parent_overview",
+    input: z.object({}),
+    output: ParentOverview,
+  },
+  "parent.weeklyEmail": {
+    owner: "A8",
+    rpc: "set_weekly_email",
+    input: z.object({ on: z.boolean() }),
     output: z.object({ ok: z.literal(true) }),
   },
   "account.export": {

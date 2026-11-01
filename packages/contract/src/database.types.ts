@@ -329,16 +329,25 @@ export type Database = {
           id: string
           display_name: string | null
           created_at: string
+          adult_check: Database["public"]["Enums"]["adult_check"] | null
+          adult_checked_at: string | null
+          weekly_email: boolean
         }
         Insert: {
           id: string
           display_name?: string | null
           created_at?: string
+          adult_check?: Database["public"]["Enums"]["adult_check"] | null
+          adult_checked_at?: string | null
+          weekly_email?: boolean
         }
         Update: {
           id?: string
           display_name?: string | null
           created_at?: string
+          adult_check?: Database["public"]["Enums"]["adult_check"] | null
+          adult_checked_at?: string | null
+          weekly_email?: boolean
         }
         Relationships: []
       }
@@ -875,6 +884,10 @@ export type Database = {
         Args: { p_week_id: string; p_by: string }
         Returns: undefined
       }
+      cheer_share: {
+        Args: { p_share_id: string; p_cheer: Database["public"]["Enums"]["cheer"] }
+        Returns: undefined
+      }
       coach_claim: {
         Args: { p_make_id: string }
         Returns: Json
@@ -891,6 +904,10 @@ export type Database = {
         Args: { p_make_id: string; p_review: Json; p_model: string; p_prompt_version: string }
         Returns: string
       }
+      confirm_adult: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_parent_invite: {
         Args: Record<PropertyKey, never>
         Returns: { token: string; expires_at: string }[]
@@ -902,6 +919,10 @@ export type Database = {
       delete_make: {
         Args: { p_make_id: string }
         Returns: string
+      }
+      get_family_status: {
+        Args: { p_make_id: string }
+        Returns: Json
       }
       get_levels: {
         Args: Record<PropertyKey, never>
@@ -923,9 +944,25 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      give_parent_consent: {
+        Args: { p_token: string; p_is_adult: boolean }
+        Returns: Json
+      }
+      invite_preview: {
+        Args: { p_token: string }
+        Returns: Json
+      }
       mark_postcards_seen: {
         Args: { p_ids: string[] }
         Returns: undefined
+      }
+      parent_feed: {
+        Args: { p_before?: string; p_limit?: number }
+        Returns: Json
+      }
+      parent_overview: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       pick_postcard: {
         Args: { p_postcard_id: string; p_make_id: string }
@@ -971,12 +1008,21 @@ export type Database = {
         Args: { p_zones: string[] }
         Returns: undefined
       }
+      set_weekly_email: {
+        Args: { p_on: boolean }
+        Returns: undefined
+      }
+      share_with_family: {
+        Args: { p_make_id: string }
+        Returns: number
+      }
       weeks_to_draft: {
         Args: { p_ahead?: number }
         Returns: { zone_id: string; week_of: string }[]
       }
     }
     Enums: {
+      adult_check: "attested" | "card_verified"
       age_bracket: "13_15" | "16_17" | "18_19"
       age_source: "store" | "self_declared"
       app_mode: "studio" | "walls"

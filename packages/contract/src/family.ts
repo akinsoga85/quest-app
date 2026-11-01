@@ -23,3 +23,44 @@ export const PARENT_LINK_TTL_DAYS = 7;
 export function parentInviteUrl(parentSiteUrl: string, token: string): string {
   return `${parentSiteUrl.replace(/\/+$/, "")}/consent?t=${encodeURIComponent(token)}`;
 }
+
+// family.status: for the "Send to family" sheet (H17) and the review screen.
+export const FamilyStatus = z.object({
+  parents: z.array(z.object({ name: z.string() })),
+  sent: z.boolean(),
+  cheers: z.array(Cheer),
+});
+export type FamilyStatus = z.infer<typeof FamilyStatus>;
+
+// parent.preview: what the consent page (H24) shows before sign-in.
+export const InvitePreview = z.object({ teenHandle: z.string(), expiresAt: z.string() }).nullable();
+export type InvitePreview = z.infer<typeof InvitePreview>;
+
+// parent.feed: a make sent to this parent, with the cheer sent back, if any.
+export const ParentFeedItem = z.object({
+  shareId: z.uuid(),
+  makeId: z.uuid(),
+  storagePath: z.string(),
+  teenHandle: z.string(),
+  questTitle: z.string(),
+  zone: z.string(),
+  day: z.iso.date(),
+  sharedAt: z.string(),
+  cheer: Cheer.nullable(),
+});
+export type ParentFeedItem = z.infer<typeof ParentFeedItem>;
+
+// parent.overview: each linked teen this week (H25), counts and levels only.
+export const ParentOverview = z.object({
+  weeklyEmail: z.boolean(),
+  teens: z.array(
+    z.object({
+      teenId: z.uuid(),
+      handle: z.string(),
+      coachOn: z.boolean(),
+      questsThisWeek: z.number().int().min(0),
+      zones: z.array(z.object({ zone: z.string(), points: z.number().int().min(0) })),
+    }),
+  ),
+});
+export type ParentOverview = z.infer<typeof ParentOverview>;
