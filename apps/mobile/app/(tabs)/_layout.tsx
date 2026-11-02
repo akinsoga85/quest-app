@@ -1,7 +1,9 @@
 import { Tabs } from "expo-router";
+import { useAgeRecheck } from "../../src/onboarding/useAgeRecheck";
 import { TabBar } from "../../src/ui/TabBar";
 
 export default function TabsLayout() {
+  useAgeRecheck();
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
       <Tabs.Screen name="index" options={{ title: "Today" }} />

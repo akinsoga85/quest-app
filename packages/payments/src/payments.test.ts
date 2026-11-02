@@ -5,7 +5,7 @@ import { cancelSubscriptionsFor, formEncode, verifyStripeSignature, type Fetch }
 
 const TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
 const OTHER_TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a12";
-const PARENT: Parent = { id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6aaa", email: "mom@example.com", teenIds: [TEEN] };
+const PARENT: Parent = { id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6aaa", email: "mom@example.com", teenIds: [TEEN], includedTeenIds: [] };
 const NOW = Date.UTC(2026, 10, 1, 12);
 const env = {
   STRIPE_WEBHOOK_SECRET: "whsec_test",
@@ -113,6 +113,12 @@ describe("checkout and the manage page", () => {
     await handlePayments(post("/portal", "{}", { authorization: "Bearer parent-jwt" }), env, d);
     expect(d.calls[1]!.url).toBe("https://api.stripe.com/v1/billing_portal/sessions");
     expect((await handlePayments(post("/portal", "{}", { authorization: "Bearer parent-jwt" }), env, deps())).status).toBe(404);
+  });
+
+  it("never charges for a 13–15, who has Plus free", async () => {
+    const d = deps({ parentFromJwt: async (jwt) => (jwt === "parent-jwt" ? { ...PARENT, includedTeenIds: [TEEN] } : null) });
+    expect((await handlePayments(post("/checkout", JSON.stringify({ teenId: TEEN }), { authorization: "Bearer parent-jwt" }), env, d)).status).toBe(409);
+    expect(d.calls).toHaveLength(0);
   });
 
   it("says when payments aren't set up", async () => {

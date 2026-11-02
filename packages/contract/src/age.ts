@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-// Only the bracket is ever stored, never a birth date (state app-store laws).
+// Never a birth date. The bracket is stored, and, for teens who give their
+// birth month and year, the month they move up to the next bracket (so free
+// Plus ends at 16 and a parent's consent at 18).
 export const AgeBracket = z.enum(["13_15", "16_17", "18_19"]);
 export type AgeBracket = z.infer<typeof AgeBracket>;
 
@@ -26,6 +28,25 @@ export function ageFromBirthMonth(year: number, month: number, today: Date): num
   const nowMonth = today.getUTCMonth() + 1;
   return nowYear - year - (nowMonth <= month ? 1 : 0);
 }
+
+// The first day of the month the teen moves to the next age group, matching
+// ageFromBirthMonth (a birthday month counts as not yet reached). null for
+// 18–19: teens stay in 18–19 after 20 and keep their account. (New sign-ups
+// over 19 are still stopped.)
+export function ageGroupEndsOn(year: number, month: number, bracket: AgeBracket): string | null {
+  const next = bracket === "13_15" ? 16 : bracket === "16_17" ? 18 : null;
+  if (next === null) return null;
+  // Date.UTC takes a 0-based month, so `month` is already the month after.
+  return new Date(Date.UTC(year + next, month, 1)).toISOString().slice(0, 10);
+}
+
+export function nextAgeGroup(bracket: AgeBracket): AgeBracket | null {
+  return bracket === "13_15" ? "16_17" : bracket === "16_17" ? "18_19" : null;
+}
+
+// Teens placed by their app store's age range are asked again this often:
+// the store moves them up on their birthday, but we never learn the date.
+export const AGE_RECHECK_MONTHS = 6;
 
 // What a store age range tells us. Ask with thresholds 13, 16 and 18. A range
 // that spans brackets resolves to the youngest one. "18+" has no upper bound, so

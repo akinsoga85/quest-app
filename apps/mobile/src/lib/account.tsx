@@ -1,4 +1,4 @@
-import { ZONES, type AgeBracket, type AppMode, type ZoneId } from "@quest/contract";
+import { ZONES, type AgeBracket, type AgeSource, type AppMode, type ZoneId } from "@quest/contract";
 import type { Session } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -12,6 +12,8 @@ export interface Teen {
   mode: AppMode;
   aiCoachConsent: boolean;
   country: string; // two-letter code, for the right helplines
+  ageSource: AgeSource;
+  ageCheckedAt: string; // when the store's age range was last asked (store-placed teens)
 }
 
 export interface ParentLink {
@@ -66,13 +68,26 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const [teenRes, linksRes, zonesRes, waitingValue] = await Promise.all([
-      supabase.from("teens").select("id, handle, age_bracket, mode, ai_coach_consent, country").eq("id", userId).maybeSingle(),
+      supabase.from("teens").select("id, handle, age_bracket, mode, ai_coach_consent, country, age_source, age_checked_at").eq("id", userId).maybeSingle(),
       supabase.from("parent_links").select("status, invite_expires_at, created_at").eq("teen_id", userId).order("created_at", { ascending: false }),
       supabase.from("teen_zones").select("zone_id").eq("teen_id", userId),
       SecureStore.getItemAsync(waitingKey(userId)),
     ]);
     const t = teenRes.data;
-    setTeen(t ? { id: t.id, handle: t.handle, ageBracket: t.age_bracket, mode: t.mode, aiCoachConsent: t.ai_coach_consent, country: t.country } : null);
+    setTeen(
+      t
+        ? {
+            id: t.id,
+            handle: t.handle,
+            ageBracket: t.age_bracket,
+            mode: t.mode,
+            aiCoachConsent: t.ai_coach_consent,
+            country: t.country,
+            ageSource: t.age_source,
+            ageCheckedAt: t.age_checked_at,
+          }
+        : null,
+    );
     setParentLinks((linksRes.data ?? []).map((l) => ({ status: l.status, inviteExpiresAt: l.invite_expires_at, createdAt: l.created_at })));
     const picked = new Set((zonesRes.data ?? []).map((z) => z.zone_id));
     setZones((Object.keys(ZONES) as ZoneId[]).filter((z) => picked.has(z)));

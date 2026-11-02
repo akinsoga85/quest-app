@@ -71,7 +71,7 @@ the admin site shows each request and any hold.
 | Function | Schedule | Header secret |
 |---|---|---|
 | `evening-drop` | every 10 minutes | `DROP_WEBHOOK_SECRET` |
-| `account-deletions` | daily | `DELETIONS_WEBHOOK_SECRET` (and `STRIPE_SECRET_KEY` once Plus is sold on the web) |
+| `account-deletions` | daily: first moves teens up an age group on their month, then deletes due accounts | `DELETIONS_WEBHOOK_SECRET` (and `STRIPE_SECRET_KEY` once Plus is sold on the web) |
 | `quest-writer` | weekly | `QUESTS_WEBHOOK_SECRET` |
 
 A job that answers 500 lists what failed; it retries on its next run.

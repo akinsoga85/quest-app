@@ -90,7 +90,9 @@ the evening drop (H19). Use test accounts and test photos only.
 
 **App Review notes** (App Store) / **App access** (Play): a demo account that's
 18–19 (no parent step) with a quest already made, and a line on how the parent
-consent works for under-18s. Reviewers can't receive the parent email.
+consent works for under-18s. Reviewers can't receive the parent email. Say
+that Plus is free for 13–15s and sold in the app to 16+, and that the demo
+account can buy it with a sandbox tester.
 
 ## 4. Privacy labels
 
@@ -105,13 +107,13 @@ and used for **app functionality** only.
 | Photos | The photos teens make for quests (location and camera data removed on the phone) | User Content → Photos or Videos | Photos and videos → Photos |
 | Other user content | Coach review ratings ("helpful"), family cheers | User Content → Other User Content | App activity → Other user-generated content |
 | Purchase history | Whether Plus is on, and until when | Purchases → Purchase History | Financial info → Purchase history |
-| Other | Age group (13–15, 16–17, 18–19), country, time zone | Other Data → Other Data Types | Personal info → Other info |
+| Other | Age group (13–15, 16–17, 18–19) and the month it changes, country, time zone | Other Data → Other Data Types | Personal info → Other info |
 
 The same list is in the iOS privacy manifest (`app.json` → `ios.privacyManifests`).
 
 - **Not collected:** location, contacts, browsing, search, health, diagnostics
   or crash data, advertising ID (blocked on Android), audio, name, birthday
-  (only the age group is kept), anything from other apps.
+  (only the age group and the month it changes are kept), anything from other apps.
 - **Google Play extra answers:** data is encrypted in transit: yes. Users can
   ask for deletion: yes, in the app and at `<parent site>/delete`. Data shared
   with third parties: no; the services below process data for us as service
@@ -153,16 +155,21 @@ what they entered (A1).
   the coach; the database enforces it (A1, `private.coach_allowed`).
 - **Safety:** every photo is checked before anyone sees it, known abuse
   imagery is blocked and reported (A5, `docs/operations.md`).
-- **Plus and in-app purchase — decision needed before release.** Today under-18s
-  get Plus through a parent on the web, and 18–19s are meant to buy in the app.
-  Apple's rules (3.1.1 and 3.1.3(b)) say an app that unlocks a subscription
-  bought elsewhere must also sell it as an in-app purchase, and outside the US
-  the app may not point people to buying elsewhere. The app now only shows
-  Plus once it's on and never says where to buy it. Before the App Store
-  release, choose one: (a) sell Plus in the app to everyone (under-18s buy
-  through Apple's Ask to Buy, so a parent still approves) alongside the parent
-  page; or (b) launch on iOS without Plus and add it with (a) later. Google
-  Play allows the parent-page purchase as long as the app doesn't steer to it.
+- **Plus and in-app purchase (decided).** 13–15s get Plus free, so they're
+  never sold anything. 16+ pay, and Plus is sold in the app (App Store and
+  Google Play, through RevenueCat), as Apple asks for a subscription the app
+  unlocks (3.1.3(b)). A 16–17 taps "Ask my parent"; a linked parent says yes
+  or not now on the parent page, and only after a yes (valid 7 days) does the
+  app show "Start Plus". A parent can also buy it on the parent page. 18–19s
+  need nobody's yes. The app never points to buying anywhere else. The Plus
+  screen shows the store's price, the renewal terms, "Restore purchases", and
+  links to the terms of use and privacy policy, as both stores require.
+- **Age groups move up.** For teens who give a birth month and year, the
+  month their age group ends is kept (not the birth date, though together
+  with the group it shows the birth month and year); a daily job moves them
+  up then. Teens placed by their app store are asked the store again every
+  6 months. Teens stay in 18–19 after they turn 20 and keep their account
+  (new sign-ups over 19 are still stopped). The privacy policy should say this.
 
 ## 7. Release checklist
 
@@ -172,7 +179,29 @@ what they entered (A1).
 - [ ] Supabase production project: migrations pushed, functions deployed with their secrets, schedules on (README)
 - [ ] Privacy policy and support pages live; URLs in both consoles
 - [ ] Privacy labels (section 4), age ratings (section 5) and data deletion URL entered
-- [ ] Plus decision made (section 6)
+- [ ] Plus set up in the stores (section 8)
 - [ ] Internal testing on both stores, with the real-phone checks in section 2
 - [ ] Demo account for review
 - [ ] Safety vendors live (A5) — the app holds every photo until they are
+
+## 8. Selling Plus in the app (needs your accounts)
+
+1. **App Store Connect:** a subscription group "Plus" with one auto-renewing
+   monthly subscription (for example `quest_plus_monthly`), its price, a
+   display name and description, and a review screenshot of the Plus screen.
+   Submit it together with the app version: the first subscription must be
+   reviewed with a build.
+2. **Google Play Console:** a subscription with a monthly base plan, its
+   price, and the same name. Play needs an uploaded build before you can add it.
+3. **RevenueCat:** add both apps and their store credentials, an entitlement
+   with the identifier `plus`, both products attached to it, and a `default`
+   offering with a monthly package. Put the public SDK keys in the EAS
+   environment variables `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and
+   `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`, and point RevenueCat's webhook at
+   `…/functions/v1/payments/webhook` (README, Plus and payments).
+4. **Terms and privacy links:** set `EXPO_PUBLIC_TERMS_URL` and
+   `EXPO_PUBLIC_PRIVACY_URL` (they default to `/terms` and `/privacy` on the
+   parent site, which don't exist yet).
+5. **Test** with an App Store sandbox tester and a Play license tester: buy,
+   cancel, restore on a second phone, and a 16–17 account before a parent
+   links, after linking, and after the parent says yes. Plus should show in Settings within seconds of buying.

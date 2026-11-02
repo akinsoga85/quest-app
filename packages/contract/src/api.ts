@@ -6,7 +6,7 @@ import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } fr
 import { NewPostcard, StudioPage, ZoneLevel } from "./levels";
 import { MakeStatus } from "./photo";
 import { Drop, NotificationPrefs } from "./notifications";
-import { ParentPlus, PlusStatus } from "./plus";
+import { ParentPlus, PlusApproval, PlusStatus } from "./plus";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
@@ -26,8 +26,17 @@ export const Api = {
       country: z.string().regex(/^[A-Z]{2}$/),
       region: z.string().max(8).nullable(),
       timezone: z.string().min(1),
+      // From the birth month and year (ageGroupEndsOn); required when self-declared and under 18.
+      ageGroupEnds: z.iso.date().nullable(),
     }),
     output: z.object({ handle: z.string(), mode: AppMode, needsParent: z.boolean() }),
+  },
+  "age.recheck": {
+    owner: "A1",
+    rpc: "confirm_age_group",
+    // Teens placed by their app store: the store's current answer. Only ever moves up.
+    input: z.object({ ageBracket: AgeBracket }),
+    output: z.object({ ageBracket: AgeBracket, moved: z.boolean() }),
   },
   "signup.abandon": {
     owner: "A1",
@@ -193,6 +202,19 @@ export const Api = {
     rpc: "parent_plus",
     input: z.object({}),
     output: ParentPlus,
+  },
+  "plus.request": {
+    owner: "A9",
+    rpc: "request_plus",
+    // A 16–17 asks a linked parent to approve buying Plus in the app.
+    input: z.object({}),
+    output: z.object({ approval: PlusApproval }),
+  },
+  "parent.decidePlus": {
+    owner: "A9",
+    rpc: "decide_plus_request",
+    input: z.object({ requestId: z.uuid(), approve: z.boolean() }),
+    output: z.object({ ok: z.literal(true) }),
   },
   "plus.checkout": {
     owner: "A9",

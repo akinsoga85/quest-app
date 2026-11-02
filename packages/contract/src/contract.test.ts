@@ -23,6 +23,11 @@ import {
   dropMessage,
   inQuietHours,
   canBuyInApp,
+  plusIncluded,
+  PLUS,
+  PlusApproval,
+  ageGroupEndsOn,
+  nextAgeGroup,
   fromRevenueCat,
   fromStripe,
   CHEER_LABELS,
@@ -576,10 +581,12 @@ describe("A9: reading store and Stripe events", () => {
     expect(fromStripe({ id: "evt_2", type: "invoice.paid", data: { object: { object: "invoice" } } })).toBeNull();
   });
 
-  it("offers in-app purchase only to 18–19s", () => {
-    expect(canBuyInApp("13_15")).toBe(false);
-    expect(canBuyInApp("16_17")).toBe(false);
-    expect(canBuyInApp("18_19")).toBe(true);
+  it("gives 13–15s Plus free, and sells it in the app to 16+ (16–17 once a parent approves)", () => {
+    expect([plusIncluded("13_15"), plusIncluded("16_17"), plusIncluded("18_19")]).toEqual([true, false, false]);
+    expect(PlusApproval.options.map((a) => canBuyInApp("16_17", a))).toEqual([false, false, true, false]);
+    expect([canBuyInApp("13_15", "approved"), canBuyInApp("18_19", "none")]).toEqual([false, true]);
+    // The teen's Plus screen promises only what exists.
+    expect(PLUS.teenPerks.join(" ")).not.toMatch(/print|report/i);
   });
 });
 
@@ -627,5 +634,32 @@ describe("A11: deletion, export and the admin site", () => {
 
   it("names an owning package for every server function", () => {
     for (const def of Object.values(Api)) expect(def.owner).toMatch(/^A(1[0-2]|[1-9])$/);
+  });
+});
+
+describe("the month a teen's age group ends", () => {
+  it("matches ageFromBirthMonth on every month, for every birth month", () => {
+    // Born in each month of 2011: walk 2024–2030 and check the stored month
+    // flips the group exactly when the age rule does.
+    for (let month = 1; month <= 12; month++) {
+      const ends16 = ageGroupEndsOn(2011, month, "13_15")!;
+      const ends18 = ageGroupEndsOn(2011, month, "16_17")!;
+      for (let y = 2024; y <= 2030; y++) {
+        for (let m = 0; m < 12; m++) {
+          const day = new Date(Date.UTC(y, m, 15));
+          const iso = day.toISOString().slice(0, 10);
+          const group = bracketForAge(ageFromBirthMonth(2011, month, day));
+          const byEnds = iso < ends16 ? "13_15" : iso < ends18 ? "16_17" : "18_19";
+          if (group === "13_15" || group === "16_17" || group === "18_19") expect(byEnds, `${month} ${iso}`).toBe(group);
+        }
+      }
+    }
+  });
+
+  it("is the first of the month after the birthday month, and nothing after 18–19", () => {
+    expect(ageGroupEndsOn(2011, 3, "13_15")).toBe("2027-04-01");
+    expect(ageGroupEndsOn(2010, 12, "16_17")).toBe("2029-01-01");
+    expect(ageGroupEndsOn(2008, 5, "18_19")).toBeNull();
+    expect([nextAgeGroup("13_15"), nextAgeGroup("16_17"), nextAgeGroup("18_19")]).toEqual(["16_17", "18_19", null]);
   });
 });

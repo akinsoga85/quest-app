@@ -227,6 +227,13 @@ function Home({ session }: { session: Session | null }) {
     window.location.assign(url);
   };
 
+  // A 16–17 asked to buy Plus in the app: a yes lets them, for 7 days.
+  const decidePlus = async (requestId: string, approve: boolean) => {
+    const { error: e } = await supabase.rpc("decide_plus_request", { p_request_id: requestId, p_approve: approve });
+    if (e) setError("Couldn't save your answer. Try again.");
+    await load();
+  };
+
   const cheer = async (shareId: string, value: string) => {
     const { error: e } = await supabase.rpc("cheer_share", { p_share_id: shareId, p_cheer: value as ParentFeedItem["cheer"] & string });
     if (e) setError("Couldn't send that cheer.");
@@ -276,7 +283,14 @@ function Home({ session }: { session: Session | null }) {
               </div>
               {!t.coachOn ? <p className="muted small">Only your teen can turn it back on, from the app.</p> : null}
             </div>
-            <PlusCard status={plus.find((p) => p.teenId === t.teenId) ?? null} busy={paying} onStart={() => void startPlus(t.teenId, "checkout")} onManage={() => void startPlus(t.teenId, "portal")} />
+            <PlusCard
+              handle={t.handle}
+              status={plus.find((p) => p.teenId === t.teenId) ?? null}
+              busy={paying}
+              onStart={() => void startPlus(t.teenId, "checkout")}
+              onManage={() => void startPlus(t.teenId, "portal")}
+              onDecide={(requestId, approve) => void decidePlus(requestId, approve)}
+            />
           </section>
         );
       })}
@@ -455,11 +469,46 @@ function GoogleLogo() {
   );
 }
 
-function PlusCard({ status, busy, onStart, onManage }: { status: ParentPlus[number] | null; busy: boolean; onStart: () => void; onManage: () => void }) {
+function PlusCard({
+  handle,
+  status,
+  busy,
+  onStart,
+  onManage,
+  onDecide,
+}: {
+  handle: string;
+  status: ParentPlus[number] | null;
+  busy: boolean;
+  onStart: () => void;
+  onManage: () => void;
+  onDecide: (requestId: string, approve: boolean) => void;
+}) {
   return (
     <section className="card" aria-labelledby="plus">
       <h2 id="plus">Plus</h2>
-      {status?.active ? (
+      {status?.request ? (
+        <div className="card ask" role="status">
+          <p>
+            <strong>{handle} asked to start Plus in the app.</strong>
+          </p>
+          <p className="text2 small">
+            If you say yes, they can start it within 7 days. It's paid through their App Store or Google Play account, at the store's price, and
+            renews monthly until they cancel it in their phone's subscriptions.
+          </p>
+          <div className="row">
+            <button className="btn primary" onClick={() => onDecide(status.request!.id, true)}>
+              Say yes
+            </button>
+            <button className="btn" onClick={() => onDecide(status.request!.id, false)}>
+              Not now
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {status?.included ? (
+        <p className="text2">Plus is included free for ages 13–15: deeper coaching and a second take on each quest. There's nothing to buy.</p>
+      ) : status?.active ? (
         <>
           <p className="text2">{plusLine(status.until, status.source)}</p>
           {status.source === "web" ? (

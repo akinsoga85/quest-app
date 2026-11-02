@@ -67,8 +67,7 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 `apps/mobile/eas.json` has three build profiles (development, preview,
 production; build numbers count up on EAS) and submits to TestFlight and Play's
 internal testing track. Everything else, from the accounts you need to the
-privacy labels, is in `docs/store-release.md`. One decision is open there:
-how Plus is sold on iOS.
+privacy labels and setting up Plus in the stores, is in `docs/store-release.md`.
 
 ## Admin and operations (A11)
 
@@ -102,10 +101,14 @@ every 10 minutes with the header `x-drop-secret`.
 
 ## Plus and payments (A9)
 
-Under-18s never pay: a parent starts Plus on the parent page (Stripe). 18–19s
-can also buy in the app (App Store or Google Play, through RevenueCat). Every
-purchase, renewal, cancellation and refund arrives as a webhook at the
-`payments` function and is applied once.
+13–15s get Plus free. 16+ pay: in the app (App Store or Google Play, through
+RevenueCat), where a 16–17 asks and a linked parent says yes on the parent
+page first, or a linked parent buys it on the parent page (Stripe). Teens move
+up an age group on the month stored at sign-up (or when their app store says
+so), so free Plus ends at 16; after 20 they stay in 18–19 and keep their
+account. Every purchase, renewal,
+cancellation and refund arrives as a webhook at the `payments` function and is
+applied once.
 
 What you need to set up (needs your accounts):
 
@@ -117,8 +120,8 @@ What you need to set up (needs your accounts):
 2. **RevenueCat**: the app's App Store and Google Play subscriptions, and a
    webhook to the same URL with an authorization header
    (`REVENUECAT_WEBHOOK_SECRET`). The app logs in to RevenueCat with the teen's
-   id. The in-app purchase screen itself (react-native-purchases) waits on the
-   Plus-on-iOS decision in `docs/store-release.md` (section 6).
+   id. Store products, the `plus` entitlement and the app's SDK keys:
+   `docs/store-release.md`, section 8.
 3. `npm run build:functions`, `supabase functions deploy payments --no-verify-jwt`,
    and the secrets listed in `supabase/functions/payments/index.ts`.
 
