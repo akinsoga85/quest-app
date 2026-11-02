@@ -140,6 +140,13 @@ scenario("store-placed teens move up when the store says so: one group, at most 
   await q("update teens set age_checked_at = now() - interval '6 months' where id = $1", [T]);
   await as(T);
   assert.deepEqual((await one("select confirm_age_group('13_15') as r")).r, { ageBracket: "16_17", moved: false }, "never down");
+  // An 18–19 the store now calls "18 or older" (they've turned 20) stays in 18–19.
+  await asAdmin();
+  await q("update teens set age_bracket = '18_19', age_checked_at = now() - interval '6 months' where id = $1", [T]);
+  await as(T);
+  assert.deepEqual((await one("select confirm_age_group('18_19') as r")).r, { ageBracket: "18_19", moved: false });
+  await asAdmin();
+  assert.equal((await one("select count(*)::int n from teens where id = $1", [T])).n, 1, "they keep their account");
   await as(U);
   await rejects("select confirm_age_group('18_19')", [], /only ages from the app store/);
   await as(T);

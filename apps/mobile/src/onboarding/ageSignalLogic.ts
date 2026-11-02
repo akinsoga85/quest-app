@@ -1,4 +1,4 @@
-import { bracketFromAgeRange, type StoreAgeVerdict } from "@quest/contract";
+import { bracketFromAgeRange, type AgeBracket, type StoreAgeVerdict } from "@quest/contract";
 
 // What the age screen does with the phone's app-store answer.
 export type StoreAgeResult =
@@ -42,4 +42,15 @@ export function recheckDue(ageSource: "store" | "self_declared", checkedAt: stri
   const due = new Date(checkedAt);
   due.setUTCMonth(due.getUTCMonth() + months);
   return now >= due;
+}
+
+// What a re-check reports to the server. "18 or older" (the store gives no
+// upper age) and "over 19" both mean 18–19: teens stay in 18–19 after 20 and
+// keep their account. A younger answer is never sent (groups only move up,
+// and the server ignores lower ones anyway).
+export function recheckBracket(r: StoreAgeResult): AgeBracket | null {
+  if (r.kind !== "verdict") return null;
+  if (r.verdict === "adult_unbounded" || r.verdict === "over_19") return "18_19";
+  if (r.verdict === "13_15" || r.verdict === "16_17" || r.verdict === "18_19") return r.verdict;
+  return null; // under 13: never moves anyone down
 }

@@ -31,7 +31,8 @@ export function ageFromBirthMonth(year: number, month: number, today: Date): num
 
 // The first day of the month the teen moves to the next age group, matching
 // ageFromBirthMonth (a birthday month counts as not yet reached). null for
-// 18–19: nothing changes after that in the app.
+// 18–19: teens stay in 18–19 after 20 and keep their account. (New sign-ups
+// over 19 are still stopped.)
 export function ageGroupEndsOn(year: number, month: number, bracket: AgeBracket): string | null {
   const next = bracket === "13_15" ? 16 : bracket === "16_17" ? 18 : null;
   if (next === null) return null;

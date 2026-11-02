@@ -105,7 +105,8 @@ every 10 minutes with the header `x-drop-secret`.
 RevenueCat), where a 16–17 asks and a linked parent says yes on the parent
 page first, or a linked parent buys it on the parent page (Stripe). Teens move
 up an age group on the month stored at sign-up (or when their app store says
-so), so free Plus ends at 16. Every purchase, renewal,
+so), so free Plus ends at 16; after 20 they stay in 18–19 and keep their
+account. Every purchase, renewal,
 cancellation and refund arrives as a webhook at the `payments` function and is
 applied once.
 

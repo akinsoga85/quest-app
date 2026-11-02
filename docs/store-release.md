@@ -168,7 +168,8 @@ what they entered (A1).
   month their age group ends is kept (not the birth date, though together
   with the group it shows the birth month and year); a daily job moves them
   up then. Teens placed by their app store are asked the store again every
-  6 months. The privacy policy should say this.
+  6 months. Teens stay in 18–19 after they turn 20 and keep their account
+  (new sign-ups over 19 are still stopped). The privacy policy should say this.
 
 ## 7. Release checklist
 
