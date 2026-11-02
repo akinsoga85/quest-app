@@ -1,4 +1,4 @@
--- Reference data and a first day of quests. Zones and skills must match
+-- Reference data and a first few days of quests. Zones and skills must match
 -- ZONES in packages/contract/src/zones.ts (checked by `npm run db:test`).
 
 insert into public.zones (id, name, status, sort) values
@@ -41,5 +41,9 @@ insert into public.quests (zone_id, title, brief, minutes, trains_skill_id, tips
    'Put a mug next to a lamp and draw only the shadows it throws, not the mug itself. One pen or pencil.',
    15, 'art_crafts.line', array['Squint to see the darkest parts', 'Leave the light areas blank'], 'approved', 'human', now());
 
+-- Yesterday, today and tomorrow, so every time zone has a quest today. The quest
+-- writer agent (A6) fills real weeks once quests are approved in admin.
 insert into public.quest_schedule (day, zone_id, quest_id)
-select current_date, q.zone_id, q.id from public.quests q where q.status = 'approved';
+select current_date + d, q.zone_id, q.id
+from public.quests q cross join generate_series(-1, 1) d
+where q.status = 'approved';

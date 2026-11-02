@@ -1,37 +1,58 @@
-import { ZONES, type ZoneId } from "@quest/contract";
-import { zoneColors } from "@quest/tokens";
-import { View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { ActivityIndicator } from "react-native";
+import { colors } from "@quest/tokens";
+import { useAccount } from "../../src/lib/account";
 import { supabaseConfigured } from "../../src/lib/supabase";
+import { TodayView } from "../../src/today/TodayView";
+import { useToday } from "../../src/today/TodayProvider";
+import { Button } from "../../src/ui/Button";
 import { Card, Screen } from "../../src/ui/Screen";
 import { Text } from "../../src/ui/Text";
 
-const liveZones = (Object.keys(ZONES) as ZoneId[]).filter((z) => ZONES[z].status === "live");
+const openQuest = (questId: string) => router.push({ pathname: "/make", params: { questId } });
 
-export default function Today() {
-  return (
-    <Screen title="Today" eyebrow="Daily quests">
-      {!supabaseConfigured ? (
+// H15 (Studio) / H5: today's quest in each of the teen's zones, the week so
+// far and the gentle streak. Everything is by the teen's local day.
+export default function TodayScreen() {
+  const { teen } = useAccount();
+  const { today, loading, error, refresh } = useToday();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  if (!supabaseConfigured) {
+    return (
+      <Screen title="Today">
         <Card>
           <Text variant="label">Not connected yet</Text>
           <Text variant="bodySmall" color="text2">
             Copy .env.example to .env and add the Supabase project's URL and anon key.
           </Text>
         </Card>
-      ) : null}
-      {liveZones.map((zone) => (
-        <Card key={zone}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: zoneColors[zone] }} />
-            <Text variant="eyebrow" color="muted">
-              {ZONES[zone].name.toUpperCase()}
+      </Screen>
+    );
+  }
+
+  if (!today) {
+    return (
+      <Screen title="Today">
+        {error ? (
+          <Card>
+            <Text variant="bodySmall" color="text2" accessibilityRole="alert">
+              {error}
             </Text>
-          </View>
-          <Text variant="subheading">Today's quest loads here</Text>
-          <Text variant="bodySmall" color="text2">
-            Built in package A2 (quests and Today).
-          </Text>
-        </Card>
-      ))}
-    </Screen>
-  );
+            <Button label="Try again" variant="secondary" onPress={() => void refresh()} disabled={loading} />
+          </Card>
+        ) : (
+          <ActivityIndicator color={colors.lime} accessibilityLabel="Loading today's quests" />
+        )}
+      </Screen>
+    );
+  }
+
+  return <TodayView today={today} studio={teen?.mode === "studio"} error={error} onOpen={openQuest} />;
 }

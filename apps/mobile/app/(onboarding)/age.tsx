@@ -1,6 +1,6 @@
 import { ageFromBirthMonth, bracketForAge, type AgeBracket, type AgeSource } from "@quest/contract";
 import { space } from "@quest/tokens";
-import { getCalendars, getLocales } from "expo-localization";
+import { getLocales } from "expo-localization";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useMemo, useState } from "react";
@@ -8,6 +8,7 @@ import { View } from "react-native";
 import { getStoreAgeSignal } from "../../src/onboarding/ageSignal";
 import { AGE_GATE_KEY, birthYearsFor, closedUntil, isClosed } from "../../src/onboarding/ageGate";
 import { useAccount } from "../../src/lib/account";
+import { deviceTimeZone } from "../../src/lib/timezone";
 import { supabase } from "../../src/lib/supabase";
 import { Button } from "../../src/ui/Button";
 import { Card, Screen } from "../../src/ui/Screen";
@@ -43,7 +44,7 @@ export default function AgeCheck() {
 
   const createProfile = async (bracket: AgeBracket, source: AgeSource) => {
     const country = (getLocales()[0]?.regionCode ?? "ZZ").toUpperCase();
-    const timezone = getCalendars()[0]?.timeZone ?? "UTC";
+    const timezone = deviceTimeZone();
     const { error: rpcError } = await supabase.rpc("create_teen_profile", {
       p_age_bracket: bracket,
       p_age_source: source,
@@ -104,7 +105,7 @@ export default function AgeCheck() {
     <Screen
       title="How old are you?"
       titleSize="title"
-      header={<StepHeader label="Step 1 of 2" back={false} />}
+      header={<StepHeader label="Step 1 of 3" back={false} />}
       footer={
         <>
           <ErrorText message={error} />

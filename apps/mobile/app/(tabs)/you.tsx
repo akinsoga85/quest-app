@@ -1,4 +1,4 @@
-import { DELETION_DAYS } from "@quest/contract";
+import { DELETION_DAYS, ZONES } from "@quest/contract";
 import { router } from "expo-router";
 import { useState } from "react";
 import { pendingInvite, useAccount } from "../../src/lib/account";
@@ -11,10 +11,10 @@ import { ErrorText } from "../../src/ui/parts";
 
 const BRACKET_LABEL = { "13_15": "13–15", "16_17": "16–17", "18_19": "18–19" } as const;
 
-// Sign-in, coach consent and parent link (A1). The full Settings screen,
+// Sign-in, zones (A2), coach consent and parent link (A1). The full Settings screen,
 // with download and delete, comes in A11 (Figma H20a / H21).
 export default function You() {
-  const { teen, parentLinks, refresh } = useAccount();
+  const { teen, parentLinks, zones, refresh } = useAccount();
   const [error, setError] = useState<string | null>(null);
   const linked = parentLinks.some((l) => l.status === "active");
   const waiting = pendingInvite(parentLinks) !== null;
@@ -33,6 +33,14 @@ export default function You() {
         <Text variant="bodySmall" color="text2">
           {teen ? `Ages ${BRACKET_LABEL[teen.ageBracket]} · ${teen.mode === "studio" ? "Studio" : "Walls"}` : ""}
         </Text>
+      </Card>
+
+      <Card>
+        <Text variant="label">Your zones</Text>
+        <Text variant="bodySmall" color="text2">
+          {zones.map((z) => ZONES[z].name).join(", ") || "None picked yet."} Swap any time; your levels stay.
+        </Text>
+        <Button label="Change zones" variant="secondary" onPress={() => router.push("/edit-zones")} />
       </Card>
 
       <Card>

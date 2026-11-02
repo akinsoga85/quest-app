@@ -6,6 +6,8 @@ import { Text } from "./Text";
 type ScreenProps = {
   title: string;
   eyebrow?: string;
+  dateline?: string; // a small line above the title, as written (H15's "Friday, Oct 23")
+  aside?: React.ReactNode; // beside the title, e.g. the streak pill
   header?: React.ReactNode; // above the title, e.g. a StepHeader
   titleSize?: "screenTitle" | "title";
   footer?: React.ReactNode; // pinned below the content: the screen's buttons
@@ -13,19 +15,36 @@ type ScreenProps = {
 };
 
 // Every screen scrolls, so nothing is cut off when teens use larger text.
-export function Screen({ title, eyebrow, header, titleSize = "screenTitle", footer, children }: ScreenProps) {
+export function Screen({ title, eyebrow, dateline, aside, header, titleSize = "screenTitle", footer, children }: ScreenProps) {
+  const heading = (
+    <View style={aside ? styles.titleBlock : undefined}>
+      {eyebrow ? (
+        <Text variant="eyebrow" color="muted">
+          {eyebrow.toUpperCase()}
+        </Text>
+      ) : null}
+      {dateline ? (
+        <Text variant="caption" color="muted">
+          {dateline}
+        </Text>
+      ) : null}
+      <Text variant={titleSize} accessibilityRole="header">
+        {title}
+      </Text>
+    </View>
+  );
   return (
     <SafeAreaView edges={footer ? ["top", "left", "right", "bottom"] : ["top", "left", "right"]} style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
         {header}
-        {eyebrow ? (
-          <Text variant="eyebrow" color="muted">
-            {eyebrow.toUpperCase()}
-          </Text>
-        ) : null}
-        <Text variant={titleSize} accessibilityRole="header">
-          {title}
-        </Text>
+        {aside ? (
+          <View style={styles.titleRow}>
+            {heading}
+            {aside}
+          </View>
+        ) : (
+          heading
+        )}
         {children}
         {footer ? <View style={styles.footer}>{footer}</View> : null}
       </ScrollView>
@@ -47,6 +66,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   footer: { marginTop: "auto", paddingTop: space.md, gap: space.sm },
+  titleRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.sm, flexWrap: "wrap" },
+  titleBlock: { flexShrink: 1 },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
