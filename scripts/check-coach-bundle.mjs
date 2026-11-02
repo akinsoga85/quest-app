@@ -10,6 +10,7 @@ const ctx = {
   zone: "photography",
   quest: { title: "Shadows that tell a story", brief: "Photograph the shadow, not the thing.", trainsSkill: "photography.light", tips: [] },
   zonePoints: 0,
+  plus: false,
   history: { questsDone: 0, skillPoints: {}, recentTips: [] },
 };
 const draft = {

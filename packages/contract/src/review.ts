@@ -67,6 +67,7 @@ export const CoachContext = z.object({
   zone: z.string(),
   quest: z.object({ title: z.string(), brief: z.string(), trainsSkill: SkillId, tips: z.array(z.string()) }),
   zonePoints: z.number().int().min(0), // for levelFor(): the coach matches its words to the level
+  plus: z.boolean().default(false), // Plus (A9): deeper coaching
   history: z.object({
     questsDone: z.number().int().min(0), // in this zone, before this one
     skillPoints: z.record(z.string(), z.number().int().min(0)), // per skill in this zone

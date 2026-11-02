@@ -17,6 +17,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/seed.sql` | Zones, skills and a first day of quests |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
+| `packages/payments` | Plus and payments (A9): RevenueCat and Stripe webhooks, Stripe Checkout and the manage page |
 | `packages/quests` | The quest writer agent (A6): curriculum, Claude writer with rule checks, weekly job |
 | `packages/safety` | The child-safety scan (A5): hash match, classifier, decision and server worker |
 | `supabase/functions` | Edge functions (the safety scan and the coach), bundled from `packages/safety` and `packages/coach` |
@@ -55,6 +56,28 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## Plus and payments (A9)
+
+Under-18s never pay: a parent starts Plus on the parent page (Stripe). 18–19s
+can also buy in the app (App Store or Google Play, through RevenueCat). Every
+purchase, renewal, cancellation and refund arrives as a webhook at the
+`payments` function and is applied once.
+
+What you need to set up (needs your accounts):
+
+1. **Stripe**: a product with a monthly price (`STRIPE_PRICE_PLUS`), the
+   customer portal turned on, and a webhook to `…/functions/v1/payments/webhook`
+   for `checkout.session.completed` and `customer.subscription.*`
+   (`STRIPE_WEBHOOK_SECRET`). For a refund, cancel the subscription
+   immediately with a refund, so Plus ends at once.
+2. **RevenueCat**: the app's App Store and Google Play subscriptions, and a
+   webhook to the same URL with an authorization header
+   (`REVENUECAT_WEBHOOK_SECRET`). The app logs in to RevenueCat with the teen's
+   id. The in-app purchase screen itself (react-native-purchases) is still to
+   add with the store release (A12).
+3. `npm run build:functions`, `supabase functions deploy payments --no-verify-jwt`,
+   and the secrets listed in `supabase/functions/payments/index.ts`.
 
 ## The parent page (A8)
 

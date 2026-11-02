@@ -4,6 +4,7 @@ import { ReviewState } from "./review";
 import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } from "./family";
 import { NewPostcard, StudioPage, ZoneLevel } from "./levels";
 import { MakeStatus } from "./photo";
+import { ParentPlus, PlusStatus } from "./plus";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
@@ -178,6 +179,31 @@ export const Api = {
     rpc: "set_weekly_email",
     input: z.object({ on: z.boolean() }),
     output: z.object({ ok: z.literal(true) }),
+  },
+  "plus.status": {
+    owner: "A9",
+    rpc: "plus_status",
+    input: z.object({}),
+    output: PlusStatus,
+  },
+  "parent.plus": {
+    owner: "A9",
+    rpc: "parent_plus",
+    input: z.object({}),
+    output: ParentPlus,
+  },
+  "plus.checkout": {
+    owner: "A9",
+    // Edge function (plus-checkout), called by a signed-in parent for a linked
+    // teen. Returns the Stripe Checkout page to send them to.
+    input: z.object({ teenId: z.uuid() }),
+    output: z.object({ url: z.url() }),
+  },
+  "plus.portal": {
+    owner: "A9",
+    // Edge function (plus-portal): Stripe's page to change or cancel Plus.
+    input: z.object({}),
+    output: z.object({ url: z.url() }),
   },
   "account.export": {
     owner: "A11",

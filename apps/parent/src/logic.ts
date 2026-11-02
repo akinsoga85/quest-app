@@ -34,3 +34,10 @@ export function shortDay(day: string): string {
   const d = new Date(`${day}T12:00:00Z`);
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
+
+// "Plus until Dec 1, bought here" for the parent page.
+export function plusLine(until: string | null, source: string | null): string {
+  const when = until ? ` until ${shortDay(until.slice(0, 10))}` : "";
+  const where = source === "web" ? "bought here" : source === "app_store" ? "bought in the App Store" : source === "google_play" ? "bought on Google Play" : "";
+  return `Plus is on${when}${where ? `, ${where}` : ""}.`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHEERS, bestZone, questsLine, route, shortDay } from "./logic";
+import { CHEERS, bestZone, plusLine, questsLine, route, shortDay } from "./logic";
 
 describe("parent page", () => {
   it("routes the consent link and everything else", () => {
@@ -15,6 +15,11 @@ describe("parent page", () => {
     expect(bestZone({ ...teen, zones: [] })).toBeNull();
     expect(questsLine(1)).toBe("quest made");
     expect(questsLine(5)).toBe("quests made");
+  });
+
+  it("says where Plus came from and until when", () => {
+    expect(plusLine("2026-12-01T00:00:00Z", "web")).toBe("Plus is on until Dec 1, bought here.");
+    expect(plusLine("2026-12-01T00:00:00Z", "app_store")).toBe("Plus is on until Dec 1, bought in the App Store.");
   });
 
   it("writes dates the short way", () => {
