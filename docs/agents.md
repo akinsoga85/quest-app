@@ -30,7 +30,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A5 | Safety scan | `ScanResult`, `SafetyLabel`, `SAFETY_THRESHOLDS`, `decideScan`, `ScanClaim`; `scan_claim`, `scan_save`, `scan_pending` (server only); tables `safety_scans`, `safety_queue`; `packages/safety` | H8 (safety card) | **Built.** Test hashes always blocked (and never sent on to the classifier); flagged items and coach concerns reach `safety_queue`; the database refuses `reviewing` without a passing scan. Left: choose the hash-matching and classifier vendors and add their adapters |
 | A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`, `weekRuleProblems`; `save_quest_week`, `approve_quest_week`, `reject_quest_week`, `weeks_to_draft`, `recent_quest_titles` (server only); table `quest_weeks`; `packages/quests` | — | **Built.** Drafts a week per zone with zero rule problems (one rewrite, never saved with problems); an approved week is scheduled Monday to Sunday, with a repeat quest every fourth week. Left: the admin approval screen (A11) and the mentors' curriculum |
 | A7 | Portfolio, skills, levels | `levelFor`, `levelledUp`, `skillScore`, `ZoneLevel`, `StudioPage`, `NewPostcard`; `levels.get`, `studio.list`, `postcards.new/seen/pick`, `make.delete` (Postgres functions); view `zone_progress`, table `postcards` | H12, H13, H18 | **Built.** Points are quests finished plus coach skill points (R32); level-ups follow `levelFor` (database parity test); a postcard at each level reached, made by the database |
-| A8 | Family share and parent page | `Cheer`; `family.share`, `family.cheer`; tables `family_shares`, `family_cheers` | H17, H19, H24, H25 | A parent sees only the makes sent to them and can send one cheer back |
+| A8 | Family share and parent page | `Cheer`, `FamilyStatus`, `ParentFeedItem`, `ParentOverview`; `family.share`, `family.status`, `family.cheer`, `parent.preview`, `parent.consent`, `parent.feed`, `parent.overview`, `parent.weeklyEmail` (Postgres functions); tables `family_shares`, `family_cheers`; `apps/parent` | H17, H19, H24, H25 | **Built.** A parent sees only the makes sent to them, only while linked, and can send one of five cheers per make; consent needs the parent to confirm they're an adult. Left: the card check (A9), the evening drop's family cheers (A10) |
 | A9 | Plus and payments | table `entitlements` (webhook only) | H25 | Buy, renew, cancel and refund on both stores and the web; under-18 purchases need a parent's approval |
 | A10 | Evening drop and notifications | table `notification_prefs` | H11, H19 | Drop at 8 pm local time; no pushes during quiet hours |
 | A11 | Admin and operations | `account.export`, `account.delete`, `DELETION_DAYS`; table `deletion_requests` | H20a, H21 | Quest approval, safety queue, 1% coach spot check, deletion and export all work |
@@ -60,6 +60,10 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 - **A6 quest writer:** built on branch `a6-quests` (on top of `a5-safety`).
 - **A7 portfolio and levels:** built on branch `a7-levels` (on top of `a6-quests`).
   Studio and Levels tabs, the level-up postcard, and deleting a make.
+- **A8 family and parent page:** built on branch `a8-family` (on top of `a7-levels`).
+  The teen's "Send to family" sheet, and `apps/parent` (consent and parent page).
+- **For A9:** replace the consent page's adult statement with the card check and
+  record `parents.adult_check = 'card_verified'`.
 - **For A11:** list draft weeks from `quest_weeks` with their quests; approve with
   `approve_quest_week(week_id, staff)` or reject with `reject_quest_week`.
 - **For A11 (safety):** the admin reads `safety_queue` (open items have no `resolved_at`) and

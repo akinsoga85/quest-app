@@ -1,4 +1,4 @@
-import { skillName, type CoachReview, type MakeStatus, type ReviewState } from "@quest/contract";
+import { CHEER_LABELS, skillName, type Cheer, type CoachReview, type MakeStatus, type ReviewState } from "@quest/contract";
 
 // Pure logic for the coach review screen (H16), kept apart so it's unit-tested.
 
@@ -58,4 +58,18 @@ export function makeStatusLabel(status: MakeStatus): string | null {
     default:
       return null;
   }
+}
+
+// "Mom", "Mom and Dad", or "your parent" when no name was given.
+export function familyNames(parents: readonly { name: string }[]): string {
+  const names = parents.map((p) => p.name);
+  if (names.length === 0) return "your parent";
+  if (names.length === 1) return names[0]!;
+  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+// The line under a review once it's been sent: "Sent to Mom · Great light".
+export function familyLine(parents: readonly { name: string }[], cheers: readonly Cheer[]): string {
+  const sent = `Sent to ${familyNames(parents)}`;
+  return cheers.length ? `${sent} · ${cheers.map((c) => CHEER_LABELS[c]).join(", ")}` : sent;
 }

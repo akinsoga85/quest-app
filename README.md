@@ -10,6 +10,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | Path | What it is |
 |---|---|
 | `apps/mobile` | Expo (React Native) app: one codebase for iPhone and Android |
+| `apps/parent` | The parent page (A8): consent and what the teen sends, a small React web app on the same backend |
 | `packages/tokens` | Colours, type, spacing and tap sizes from Figma, with contrast tests |
 | `packages/contract` | The shared contract: data shapes, rules and server-function signatures, plus generated database types |
 | `supabase/migrations` | Database schema with row-level security on every table |
@@ -54,6 +55,25 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## The parent page (A8)
+
+`apps/parent` is a static web app (Vite + React): the consent page the teen's
+link opens (`/consent?t=…`), and the parent page with what the teen sent,
+cheers back, the weekly email switch and turning coach reviews off.
+
+```sh
+cp apps/parent/.env.example apps/parent/.env   # the same Supabase URL and anon key as the app
+npm run dev -w @quest/parent
+npm run build -w @quest/parent                 # static files in apps/parent/dist
+```
+
+Host `apps/parent/dist` on any static host with a single-page fallback (all
+paths serve `index.html`), at the address in the app's
+`EXPO_PUBLIC_PARENT_SITE_URL`. In Supabase → Authentication, turn on Apple,
+Google and email sign-in links, and add the parent site's address to the
+allowed redirect URLs. Parents confirm they're adults before consent counts;
+the card check (no charge) comes with payments (A9).
 
 ## The quest writer (A6)
 

@@ -17,6 +17,8 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   CoachClaim,
+  CHEER_LABELS,
+  Cheer,
   SAFETY_THRESHOLDS,
   skillScore,
   decideScan,
@@ -516,5 +518,24 @@ describe("A7: points, skill scores and postcards", () => {
     expect(() => Api["levels.get"].output.parse([{ zone: "photography", points: 3, skills: { x: 11 }, compare: null }])).toThrow();
     expect(Api["postcards.new"].output.parse([{ id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", zone: "photography", level: 2, makeId: null }])).toHaveLength(1);
     expect(() => Api["postcards.new"].output.parse([{ id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", zone: "photography", level: 1, makeId: null }])).toThrow();
+  });
+});
+
+describe("A8: family sharing and the parent page", () => {
+  it("cheers are the five named ones, with labels, and nothing else", () => {
+    expect(Cheer.options).toEqual(["great_light", "great_framing", "great_moment", "clever_idea", "love_this"]);
+    for (const c of Cheer.options) expect(CHEER_LABELS[c].length).toBeGreaterThan(3);
+    expect(Api["family.cheer"].input.safeParse({ shareId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", cheer: "nice!" }).success).toBe(false);
+  });
+
+  it("consent needs an adult, and a preview may be empty", () => {
+    expect(Api["parent.consent"].input.safeParse({ token: "t", isAdult: false }).success).toBe(false);
+    expect(Api["parent.preview"].output.parse(null)).toBeNull();
+  });
+
+  it("validates the parent page's reads", () => {
+    const o = Api["parent.overview"].output.parse({ weeklyEmail: true, teens: [{ teenId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", handle: "BlueFox-482", coachOn: true, questsThisWeek: 5, zones: [{ zone: "photography", points: 30 }] }] });
+    expect(levelFor(o.teens[0]!.zones[0]!.points).level).toBe(3);
+    expect(Api["family.status"].output.parse({ parents: [{ name: "Mom" }], sent: false, cheers: [] }).sent).toBe(false);
   });
 });

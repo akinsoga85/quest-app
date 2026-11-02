@@ -79,6 +79,7 @@ function Routes() {
         <Stack.Screen name="edit-zones" options={{ presentation: "modal" }} />
         <Stack.Screen name="review/[makeId]" options={{ presentation: "modal" }} />
         <Stack.Screen name="level-up" options={{ presentation: "modal" }} />
+        <Stack.Screen name="send-family/[makeId]" options={{ presentation: "modal" }} />
       </Stack.Protected>
     </Stack>
   );

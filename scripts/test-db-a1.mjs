@@ -146,6 +146,7 @@ scenario("a parent accepts: link active, parent can see the teen, teen sees the 
   const teen = await createTeen("13_15", "CA");
   const inv = await one("select * from create_parent_invite()");
   await as(P);
+  await q("select confirm_adult()"); // A8: parents confirm they're adults first
   const r = await one("select * from accept_parent_invite($1)", [inv.token]);
   assert.equal(r.teen_handle, teen.handle);
   assert.equal((await one("select handle from teens")).handle, teen.handle);
@@ -175,6 +176,7 @@ scenario("tokens can't be reused, guessed or accepted by a teen", async () => {
   await rejects("select * from accept_parent_invite($1)", [inv.token], /cannot be parents/);
   await as(P);
   await rejects("select * from accept_parent_invite($1)", ["0".repeat(64)], /not found or expired/);
+  await q("select confirm_adult()"); // A8: parents confirm they're adults first
   await one("select * from accept_parent_invite($1)", [inv.token]);
   await as(S);
   await rejects("select * from accept_parent_invite($1)", [inv.token], /not found or expired/);
@@ -194,6 +196,7 @@ scenario("AI coach consent: teen on and off, parent off only, strangers never", 
   await createTeen("13_15");
   const inv = await one("select * from create_parent_invite()");
   await as(P);
+  await q("select confirm_adult()"); // A8: parents confirm they're adults first
   await one("select * from accept_parent_invite($1)", [inv.token]);
 
   await as(T);
@@ -229,6 +232,7 @@ scenario("coach reviews need the teen's yes, plus a parent for under-18s", async
   await as(T);
   const inv = await one("select * from create_parent_invite()");
   await as(P);
+  await q("select confirm_adult()"); // A8: parents confirm they're adults first
   await one("select * from accept_parent_invite($1)", [inv.token]);
   await asAdmin();
   assert.equal(await allowed(T), true, "13–15 with consent and a parent");
