@@ -17,6 +17,9 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   CoachClaim,
+  dropDue,
+  dropMessage,
+  inQuietHours,
   canBuyInApp,
   fromRevenueCat,
   fromStripe,
@@ -575,5 +578,34 @@ describe("A9: reading store and Stripe events", () => {
     expect(canBuyInApp("13_15")).toBe(false);
     expect(canBuyInApp("16_17")).toBe(false);
     expect(canBuyInApp("18_19")).toBe(true);
+  });
+});
+
+describe("A10: quiet hours and the drop", () => {
+  const prefs = { dropTime: "20:00", quietStart: "21:00", quietEnd: "07:00", dailyReminder: false };
+
+  it("knows quiet hours, including ones that run past midnight", () => {
+    expect(inQuietHours("21:00", "21:00", "07:00")).toBe(true);
+    expect(inQuietHours("03:00", "21:00", "07:00")).toBe(true);
+    expect(inQuietHours("07:00", "21:00", "07:00")).toBe(false);
+    expect(inQuietHours("20:59", "21:00", "07:00")).toBe(false);
+    expect(inQuietHours("13:00", "12:00", "14:00")).toBe(true);
+    expect(inQuietHours("13:00", "12:00", "12:00")).toBe(false);
+  });
+
+  it("sends once, at the drop time, within the window, never in quiet hours", () => {
+    expect(dropDue(prefs, "19:59", "2026-11-02", null)).toBe("not_yet");
+    expect(dropDue(prefs, "20:00", "2026-11-02", null)).toBe("send");
+    expect(dropDue(prefs, "20:00", "2026-11-02", "2026-11-02")).toBe("done");
+    expect(dropDue(prefs, "21:59", "2026-11-02", "2026-11-01")).toBe("quiet");
+    expect(dropDue(prefs, "22:00", "2026-11-02", "2026-11-01")).toBe("missed");
+  });
+
+  it("writes a push with counts only, nothing personal", () => {
+    expect(dropMessage({ pointsToday: 4, cheersToday: 1, madeToday: true })).toEqual({ title: "Tonight's drop", body: "You earned 4 skill points and a cheer from family today." });
+    expect(dropMessage({ pointsToday: 1, cheersToday: 0, madeToday: true }).body).toBe("You earned 1 skill point today.");
+    expect(dropMessage({ pointsToday: 0, cheersToday: 0, madeToday: false }).body).toMatch(/still time/);
+    expect(Api["push.register"].input.safeParse({ token: "ExponentPushToken[abc]", platform: "ios" }).success).toBe(true);
+    expect(Api["push.register"].input.safeParse({ token: "abc", platform: "ios" }).success).toBe(false);
   });
 });

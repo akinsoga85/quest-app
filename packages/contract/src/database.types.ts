@@ -99,6 +99,35 @@ export type Database = {
         }
         Relationships: []
       }
+      drops: {
+        Row: {
+          teen_id: string
+          day: string
+          pushed: boolean
+          sent_at: string
+        }
+        Insert: {
+          teen_id: string
+          day: string
+          pushed: boolean
+          sent_at?: string
+        }
+        Update: {
+          teen_id?: string
+          day?: string
+          pushed?: boolean
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drops_teen_id_fkey"
+            columns: ["teen_id"]
+            isOneToOne: false
+            referencedRelation: "teens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entitlement_events: {
         Row: {
           event_id: string
@@ -458,6 +487,35 @@ export type Database = {
             columns: ["zone_id"]
             isOneToOne: false
             referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          token: string
+          teen_id: string
+          platform: string
+          updated_at: string
+        }
+        Insert: {
+          token: string
+          teen_id: string
+          platform: string
+          updated_at?: string
+        }
+        Update: {
+          token?: string
+          teen_id?: string
+          platform?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_teen_id_fkey"
+            columns: ["teen_id"]
+            isOneToOne: false
+            referencedRelation: "teens"
             referencedColumns: ["id"]
           },
         ]
@@ -987,6 +1045,14 @@ export type Database = {
         Args: { p_make_id: string }
         Returns: string
       }
+      drop_candidates: {
+        Args: { p_now?: string }
+        Returns: Json
+      }
+      get_drop: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_family_status: {
         Args: { p_make_id: string }
         Returns: Json
@@ -1051,12 +1117,24 @@ export type Database = {
         Args: { p_zone: string; p_weeks?: number }
         Returns: string[]
       }
+      record_drop: {
+        Args: { p_teen: string; p_day: string; p_pushed: boolean }
+        Returns: boolean
+      }
       record_make: {
         Args: { p_make_id: string; p_quest_id: string; p_captured_at: string }
         Returns: Json
       }
+      register_push_token: {
+        Args: { p_token: string; p_platform: string }
+        Returns: undefined
+      }
       reject_quest_week: {
         Args: { p_week_id: string; p_by: string; p_note: string }
+        Returns: undefined
+      }
+      remove_push_token: {
+        Args: { p_token: string }
         Returns: undefined
       }
       save_billing_customer: {
@@ -1083,6 +1161,10 @@ export type Database = {
         Args: { p_allow: boolean; p_teen_id?: string }
         Returns: undefined
       }
+      set_notification_prefs: {
+        Args: { p_drop_time: string; p_quiet_start: string; p_quiet_end: string; p_daily_reminder: boolean }
+        Returns: undefined
+      }
       set_teen_zones: {
         Args: { p_zones: string[] }
         Returns: undefined
@@ -1094,6 +1176,10 @@ export type Database = {
       share_with_family: {
         Args: { p_make_id: string }
         Returns: number
+      }
+      unregister_push_token: {
+        Args: { p_token: string }
+        Returns: undefined
       }
       weeks_to_draft: {
         Args: { p_ahead?: number }

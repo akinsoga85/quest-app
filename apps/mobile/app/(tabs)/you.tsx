@@ -7,7 +7,12 @@ import { supabase } from "../../src/lib/supabase";
 import { Button } from "../../src/ui/Button";
 import { Card, Screen } from "../../src/ui/Screen";
 import { Text } from "../../src/ui/Text";
-import { ErrorText } from "../../src/ui/parts";
+import { ErrorText, Pill } from "../../src/ui/parts";
+import { dropPushesOn, enableDropPushes } from "../../src/notify/push";
+import { View } from "react-native";
+
+// Drop times that stay outside the default quiet hours (9 pm to 7 am).
+const DROP_TIMES = ["17:00", "18:00", "19:00", "20:00"];
 
 const BRACKET_LABEL = { "13_15": "13–15", "16_17": "16–17", "18_19": "18–19" } as const;
 
@@ -17,12 +22,31 @@ export default function You() {
   const { teen, parentLinks, zones, refresh } = useAccount();
   const [error, setError] = useState<string | null>(null);
   const [plus, setPlus] = useState<PlusStatus | null>(null);
+  const [pushes, setPushes] = useState<"on" | "off" | "denied" | "unavailable">("off");
+  const [dropTime, setDropTime] = useState("20:00");
 
   useFocusEffect(
     useCallback(() => {
       void supabase.rpc("plus_status").then(({ data }) => setPlus(Api["plus.status"].output.safeParse(data).data ?? null));
-    }, []),
+      void dropPushesOn().then((on) => setPushes((p) => (on ? "on" : p === "on" ? "off" : p)));
+      if (teen) {
+        void supabase
+          .from("notification_prefs")
+          .select("drop_time")
+          .eq("teen_id", teen.id)
+          .maybeSingle()
+          .then(({ data }) => data && setDropTime(String(data.drop_time).slice(0, 5)));
+      }
+    }, [teen]),
   );
+
+  // Quiet hours stay at the defaults (9 pm to 7 am), which suit every age.
+  const saveDropTime = async (t: string) => {
+    setDropTime(t);
+    const { error: e } = await supabase.rpc("set_notification_prefs", { p_drop_time: t, p_quiet_start: "21:00", p_quiet_end: "07:00", p_daily_reminder: false });
+    if (e) setError("Couldn't save the drop time.");
+  };
+
   const linked = parentLinks.some((l) => l.status === "active");
   const waiting = pendingInvite(parentLinks) !== null;
 
@@ -48,6 +72,31 @@ export default function You() {
           {zones.map((z) => ZONES[z].name).join(", ") || "None picked yet."} Swap any time; your levels stay.
         </Text>
         <Button label="Change zones" variant="secondary" onPress={() => router.push("/edit-zones")} />
+      </Card>
+
+      <Card>
+        <Text variant="label">Evening drop</Text>
+        <Text variant="bodySmall" color="text2">
+          Once a day, what your makes earned and any cheers from family. Never during quiet hours (9 pm to 7 am).
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {DROP_TIMES.map((t) => (
+            <Pill key={t} label={t} selected={dropTime === t} onPress={() => void saveDropTime(t)} />
+          ))}
+        </View>
+        {pushes === "on" ? (
+          <Text variant="caption" color="lime">
+            Notifications are on.
+          </Text>
+        ) : (
+          <Button label="Turn on notifications" variant="secondary" onPress={() => void enableDropPushes().then((r) => setPushes(r))} />
+        )}
+        {pushes === "denied" ? (
+          <Text variant="caption" color="muted">
+            Notifications are off for this app. You can turn them on in Settings, or open the drop from the You tab.
+          </Text>
+        ) : null}
+        <Button label="See tonight's drop" variant="secondary" onPress={() => router.push("/drop")} />
       </Card>
 
       <Card>

@@ -4,6 +4,7 @@ import { ReviewState } from "./review";
 import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } from "./family";
 import { NewPostcard, StudioPage, ZoneLevel } from "./levels";
 import { MakeStatus } from "./photo";
+import { Drop, NotificationPrefs } from "./notifications";
 import { ParentPlus, PlusStatus } from "./plus";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
@@ -204,6 +205,25 @@ export const Api = {
     // Edge function (plus-portal): Stripe's page to change or cancel Plus.
     input: z.object({}),
     output: z.object({ url: z.url() }),
+  },
+  "drop.get": {
+    owner: "A10",
+    rpc: "get_drop",
+    input: z.object({}),
+    output: Drop,
+  },
+  "notifications.prefs": {
+    owner: "A10",
+    rpc: "set_notification_prefs",
+    input: NotificationPrefs,
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "push.register": {
+    owner: "A10",
+    rpc: "register_push_token",
+    // An Expo push token for this phone; a teen can have several phones.
+    input: z.object({ token: z.string().regex(/^Expo(nent)?PushToken\[.+\]$/), platform: z.enum(["ios", "android"]) }),
+    output: z.object({ ok: z.literal(true) }),
   },
   "account.export": {
     owner: "A11",
