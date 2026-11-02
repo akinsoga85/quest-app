@@ -28,7 +28,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A3 | Capture and upload | `PHOTO`, `cropTo45`, `jpegMetadata`, `stripJpegMetadata`, `makePath`, `MakeStatus`; `make.record` (Postgres function); table `makes`; storage bucket `makes` | H6, H23 | **Built.** Photos lose location and device data on the phone (tested on real GPS JPEGs); the upload queue resumes after dropped connections and restarts; Android uses the system photo picker with broad photo permissions blocked |
 | A4 | Coach agent | `CoachReview`, `CoachContext`, `CoachClaim`, `ReviewState`, `LESSONS`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`, `review.rate` (Postgres functions); `coach_claim`, `coach_save_review`, `coach_save_outcome` (server only); tables `reviews`, `skill_points`, `coach_flags`; `packages/coach` | H7, H16 | **Built.** No review without consent (database and worker tests); every review passes the contract, the deterministic guardrails and a model check, with one rewrite, else a lesson. Left: run `npm run coach -- eval` on the mentors' test set |
 | A5 | Safety scan | `ScanResult`, `SafetyLabel`, `SAFETY_THRESHOLDS`, `decideScan`, `ScanClaim`; `scan_claim`, `scan_save`, `scan_pending` (server only); tables `safety_scans`, `safety_queue`; `packages/safety` | H8 (safety card) | **Built.** Test hashes always blocked (and never sent on to the classifier); flagged items and coach concerns reach `safety_queue`; the database refuses `reviewing` without a passing scan. Left: choose the hash-matching and classifier vendors and add their adapters |
-| A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`; drafts into `quests` | — | Drafts a week per zone with zero rule problems; approved in admin |
+| A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`, `weekRuleProblems`; `save_quest_week`, `approve_quest_week`, `reject_quest_week`, `weeks_to_draft`, `recent_quest_titles` (server only); table `quest_weeks`; `packages/quests` | — | **Built.** Drafts a week per zone with zero rule problems (one rewrite, never saved with problems); an approved week is scheduled Monday to Sunday, with a repeat quest every fourth week. Left: the admin approval screen (A11) and the mentors' curriculum |
 | A7 | Portfolio, skills, levels | `levelFor`, `levelledUp`; `review.rate`; view `zone_progress`, table `postcards` | H12, H13, H18 | Level-ups follow the rules; a digital postcard at each level-up |
 | A8 | Family share and parent page | `Cheer`; `family.share`, `family.cheer`; tables `family_shares`, `family_cheers` | H17, H19, H24, H25 | A parent sees only the makes sent to them and can send one cheer back |
 | A9 | Plus and payments | table `entitlements` (webhook only) | H25 | Buy, renew, cancel and refund on both stores and the web; under-18 purchases need a parent's approval |
@@ -57,7 +57,10 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 - **A5 safety scan:** built on branch `a5-safety` (on top of `a4-coach`). It fails
   closed: with no vendors set up, nothing is scanned and nothing reaches the coach.
   It also strips any metadata the phone missed from the stored copy.
-- **For A11:** the admin reads `safety_queue` (open items have no `resolved_at`) and
+- **A6 quest writer:** built on branch `a6-quests` (on top of `a5-safety`).
+- **For A11:** list draft weeks from `quest_weeks` with their quests; approve with
+  `approve_quest_week(week_id, staff)` or reject with `reject_quest_week`.
+- **For A11 (safety):** the admin reads `safety_queue` (open items have no `resolved_at`) and
   resolves them; releasing a held photo means a `pass` scan, then `reviewing`.
 - **For A12:** Expo's template adds `SYSTEM_ALERT_WINDOW` (used by the dev menu);
   consider blocking it in release builds.

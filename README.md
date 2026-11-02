@@ -16,6 +16,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/seed.sql` | Zones, skills and a first day of quests |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
+| `packages/quests` | The quest writer agent (A6): curriculum, Claude writer with rule checks, weekly job |
 | `packages/safety` | The child-safety scan (A5): hash match, classifier, decision and server worker |
 | `supabase/functions` | Edge functions (the safety scan and the coach), bundled from `packages/safety` and `packages/coach` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
@@ -53,6 +54,24 @@ The app uses native modules (store age signals, Sign in with Apple), so run it i
 - **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
   Supabase this works because the function runs as the database owner; check it
   once in the staging project.
+
+## The quest writer (A6)
+
+Each week a schedule runs the `quest-writer` function, which drafts the next
+two weeks for every live zone that has none (7 quests per zone, with Claude
+Opus 5.5). Every week must pass `weekRuleProblems`: safe, phone-only, no
+people, flat-lay fashion, every skill trained, no repeats. A week with
+problems gets one rewrite and is never saved with problems left. Drafts are
+invisible to teens until a person approves them in the admin (A11), which
+schedules them Monday to Sunday.
+
+```sh
+npm run quests -- draft --zone photography --week 2026-11-09   # prints a draft; saves nothing; costs money
+```
+
+To deploy: `npm run build:functions`, `supabase functions deploy quest-writer
+--no-verify-jwt`, set `ANTHROPIC_API_KEY` and `QUESTS_WEBHOOK_SECRET`, and add
+a weekly schedule that POSTs `{}` with the header `x-quests-secret`.
 
 ## The safety scan (A5)
 

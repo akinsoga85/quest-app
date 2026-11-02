@@ -424,6 +424,50 @@ export type Database = {
           },
         ]
       }
+      quest_weeks: {
+        Row: {
+          id: string
+          zone_id: string
+          week_of: string
+          status: Database["public"]["Enums"]["week_status"]
+          model: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          note: string | null
+        }
+        Insert: {
+          id?: string
+          zone_id: string
+          week_of: string
+          status?: Database["public"]["Enums"]["week_status"]
+          model: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          note?: string | null
+        }
+        Update: {
+          id?: string
+          zone_id?: string
+          week_of?: string
+          status?: Database["public"]["Enums"]["week_status"]
+          model?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quest_weeks_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quests: {
         Row: {
           id: string
@@ -437,6 +481,8 @@ export type Database = {
           written_by: string
           approved_at: string | null
           created_at: string
+          week_id: string | null
+          week_day: number | null
         }
         Insert: {
           id?: string
@@ -450,6 +496,8 @@ export type Database = {
           written_by?: string
           approved_at?: string | null
           created_at?: string
+          week_id?: string | null
+          week_day?: number | null
         }
         Update: {
           id?: string
@@ -463,6 +511,8 @@ export type Database = {
           written_by?: string
           approved_at?: string | null
           created_at?: string
+          week_id?: string | null
+          week_day?: number | null
         }
         Relationships: [
           {
@@ -470,6 +520,13 @@ export type Database = {
             columns: ["trains_skill_id"]
             isOneToOne: false
             referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quests_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "quest_weeks"
             referencedColumns: ["id"]
           },
           {
@@ -811,6 +868,10 @@ export type Database = {
         Args: { p_token: string }
         Returns: { teen_handle: string }[]
       }
+      approve_quest_week: {
+        Args: { p_week_id: string; p_by: string }
+        Returns: undefined
+      }
       coach_claim: {
         Args: { p_make_id: string }
         Returns: Json
@@ -847,9 +908,21 @@ export type Database = {
         Args: { p_review_id: string; p_helpful: boolean }
         Returns: undefined
       }
+      recent_quest_titles: {
+        Args: { p_zone: string; p_weeks?: number }
+        Returns: string[]
+      }
       record_make: {
         Args: { p_make_id: string; p_quest_id: string; p_captured_at: string }
         Returns: Json
+      }
+      reject_quest_week: {
+        Args: { p_week_id: string; p_by: string; p_note: string }
+        Returns: undefined
+      }
+      save_quest_week: {
+        Args: { p_zone: string; p_week_of: string; p_quests: Json; p_model: string }
+        Returns: string
       }
       scan_claim: {
         Args: { p_make_id: string }
@@ -871,6 +944,10 @@ export type Database = {
         Args: { p_zones: string[] }
         Returns: undefined
       }
+      weeks_to_draft: {
+        Args: { p_ahead?: number }
+        Returns: { zone_id: string; week_of: string }[]
+      }
     }
     Enums: {
       age_bracket: "13_15" | "16_17" | "18_19"
@@ -883,6 +960,7 @@ export type Database = {
       quest_status: "draft" | "approved" | "retired"
       queue_source: "scan" | "coach"
       scan_result: "pass" | "block" | "human_review"
+      week_status: "draft" | "approved" | "rejected"
       zone_status: "live" | "coming" | "off"
     }
     CompositeTypes: { [_ in never]: never }
