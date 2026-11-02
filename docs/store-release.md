@@ -176,7 +176,7 @@ what they entered (A1).
 - [ ] Bundle ID, package name and app name set; `eas init` run
 - [ ] Final app icon and splash from design (the current ones are placeholders: a dark Q on lime)
 - [ ] EAS environment variables set for production
-- [ ] Supabase production project: migrations pushed, functions deployed with their secrets, schedules on (README)
+- [ ] Supabase production project set up (`docs/production-setup.md`)
 - [ ] Privacy policy and support pages live; URLs in both consoles
 - [ ] Privacy labels (section 4), age ratings (section 5) and data deletion URL entered
 - [ ] Plus set up in the stores (section 8)

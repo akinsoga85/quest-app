@@ -1,0 +1,24 @@
+# Supabase CLI settings for linking and deploying (scripts/setup-production.sh).
+# Local development uses scripts/db-local.sh instead of `supabase start`.
+project_id = "quest-app"
+
+# Every function checks its own caller: a shared secret header (schedules and
+# database triggers), Stripe's signature or RevenueCat's header (payments
+# webhook), or the parent's own session (payments checkout and portal).
+[functions.safety-scan]
+verify_jwt = false
+
+[functions.coach-review]
+verify_jwt = false
+
+[functions.quest-writer]
+verify_jwt = false
+
+[functions.payments]
+verify_jwt = false
+
+[functions.evening-drop]
+verify_jwt = false
+
+[functions.account-deletions]
+verify_jwt = false
