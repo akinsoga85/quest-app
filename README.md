@@ -27,11 +27,29 @@ npm run check          # types, lint, unit tests
 npm run db:up          # start a throwaway Postgres and load the schema
 npm run db:test        # access-rule and integrity tests
 npm run gen:types      # regenerate database types after a migration
-npm run start -w @quest/mobile   # Expo dev server (scan with Expo Go or a dev build)
+npm run start -w @quest/mobile   # Expo dev server (needs a development build, see below)
 ```
 
 To connect the app to Supabase, copy `apps/mobile/.env.example` to `.env` and fill
-in the project URL and anon key. Deploy the schema with `supabase db push`.
+in the project URL, anon key and parent site URL. Deploy the schema with `supabase db push`.
+
+The app uses native modules (store age signals, Sign in with Apple), so run it in a
+[development build](https://docs.expo.dev/develop/development-builds/introduction/)
+(`eas build --profile development`) rather than Expo Go.
+
+## Sign-in setup (A1)
+
+- **Supabase → Authentication → Providers:** turn on Apple and Google. Add
+  `quest://auth/callback` to the allowed redirect URLs.
+- **Apple:** in the Apple Developer account, enable *Sign in with Apple* and the
+  *Declared Age Range* capability for the app ID (`app.json` already asks for both).
+  Create a Services ID and key for Supabase's Apple provider, used for Apple
+  sign-in on Android.
+- **Google:** create an OAuth client in Google Cloud and add its ID and secret to
+  Supabase's Google provider. In Play Console, set up Play Age Signals for the app.
+- **Under-13 accounts:** `abandon_signup()` deletes the user from `auth.users`. On
+  Supabase this works because the function runs as the database owner; check it
+  once in the staging project.
 
 ## Before the first store build
 

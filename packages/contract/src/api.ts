@@ -1,19 +1,49 @@
 import { z } from "zod";
+import { AgeBracket, AgeSource, AppMode } from "./age";
 import { CoachReview } from "./review";
 import { Cheer } from "./family";
 
-// Server functions (Supabase edge functions). Each package builds its own
-// functions against these shapes, and the app calls them only through these.
-// `owner` is the build package responsible for the function.
+// Server functions. Each package builds its own functions against these shapes,
+// and the app calls them only through these. `owner` is the build package
+// responsible. Functions with `rpc` are Postgres functions (supabase.rpc(name),
+// arguments prefixed p_); the rest are Supabase edge functions.
 export const Api = {
+  "teen.create": {
+    owner: "A1",
+    rpc: "create_teen_profile",
+    input: z.object({
+      ageBracket: AgeBracket,
+      ageSource: AgeSource,
+      country: z.string().regex(/^[A-Z]{2}$/),
+      region: z.string().max(8).nullable(),
+      timezone: z.string().min(1),
+    }),
+    output: z.object({ handle: z.string(), mode: AppMode, needsParent: z.boolean() }),
+  },
+  "signup.abandon": {
+    owner: "A1",
+    rpc: "abandon_signup",
+    input: z.object({}),
+    output: z.object({ ok: z.literal(true) }),
+  },
   "parent.invite": {
     owner: "A1",
+    rpc: "create_parent_invite",
     input: z.object({}),
-    output: z.object({ inviteUrl: z.url(), expiresAt: z.iso.datetime() }),
+    // The app turns the token into a link with parentInviteUrl().
+    output: z.object({ token: z.string().regex(/^[0-9a-f]{64}$/), expiresAt: z.iso.datetime({ offset: true }) }),
+  },
+  "parent.accept": {
+    owner: "A1",
+    rpc: "accept_parent_invite",
+    input: z.object({ token: z.string() }),
+    output: z.object({ teenHandle: z.string() }),
   },
   "ai.consent": {
     owner: "A1",
-    input: z.object({ allow: z.boolean() }),
+    rpc: "set_ai_coach_consent",
+    // A teen can switch coach reviews on or off; a linked parent can only switch them off.
+    input: z.object({ allow: z.boolean(), teenId: z.uuid().nullable() }),
     output: z.object({ ok: z.literal(true) }),
   },
   "make.createUpload": {

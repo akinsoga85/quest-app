@@ -5,6 +5,21 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          id: boolean
+          walls_live: boolean
+        }
+        Insert: {
+          id?: boolean
+          walls_live?: boolean
+        }
+        Update: {
+          id?: boolean
+          walls_live?: boolean
+        }
+        Relationships: []
+      }
       deletion_requests: {
         Row: {
           id: string
@@ -640,6 +655,7 @@ export type Database = {
           ai_coach_consent_at: string | null
           timezone: string
           created_at: string
+          age_source: Database["public"]["Enums"]["age_source"]
         }
         Insert: {
           id: string
@@ -652,6 +668,7 @@ export type Database = {
           ai_coach_consent_at?: string | null
           timezone?: string
           created_at?: string
+          age_source?: Database["public"]["Enums"]["age_source"]
         }
         Update: {
           id?: string
@@ -664,6 +681,7 @@ export type Database = {
           ai_coach_consent_at?: string | null
           timezone?: string
           created_at?: string
+          age_source?: Database["public"]["Enums"]["age_source"]
         }
         Relationships: []
       }
@@ -699,9 +717,31 @@ export type Database = {
         Relationships: []
       }
     }
-    Functions: { [_ in never]: never }
+    Functions: {
+      abandon_signup: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      accept_parent_invite: {
+        Args: { p_token: string }
+        Returns: { teen_handle: string }[]
+      }
+      create_parent_invite: {
+        Args: Record<PropertyKey, never>
+        Returns: { token: string; expires_at: string }[]
+      }
+      create_teen_profile: {
+        Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string }
+        Returns: { handle: string; mode: Database["public"]["Enums"]["app_mode"]; needs_parent: boolean }[]
+      }
+      set_ai_coach_consent: {
+        Args: { p_allow: boolean; p_teen_id?: string }
+        Returns: undefined
+      }
+    }
     Enums: {
       age_bracket: "13_15" | "16_17" | "18_19"
+      age_source: "store" | "self_declared"
       app_mode: "studio" | "walls"
       cheer: "great_light" | "great_framing" | "great_moment" | "clever_idea" | "love_this"
       entitlement_source: "app_store" | "google_play" | "web"

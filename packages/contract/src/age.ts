@@ -14,6 +14,36 @@ export function bracketForAge(age: number): AgeCheck {
   return "over_19";
 }
 
+// Where the bracket came from: the phone's app store (Apple Declared Age Range,
+// Google Play Age Signals) or the teen's own answer when the store shares nothing.
+export const AgeSource = z.enum(["store", "self_declared"]);
+export type AgeSource = z.infer<typeof AgeSource>;
+
+// Age from a birth month and year. The day is unknown, so a birthday in the
+// current month counts as not yet reached: borderline cases get the younger age.
+export function ageFromBirthMonth(year: number, month: number, today: Date): number {
+  const nowYear = today.getUTCFullYear();
+  const nowMonth = today.getUTCMonth() + 1;
+  return nowYear - year - (nowMonth <= month ? 1 : 0);
+}
+
+// What a store age range tells us. Ask with thresholds 13, 16 and 18. A range
+// that spans brackets resolves to the youngest one. "18+" has no upper bound, so
+// the app still asks for a birth year to check the teen is 19 or under.
+export type StoreAgeVerdict = AgeCheck | "adult_unbounded" | "unknown";
+
+export function bracketFromAgeRange(lower: number | null, upper: number | null): StoreAgeVerdict {
+  if (upper !== null && upper < 13) return "under_13";
+  if (lower === null && upper === null) return "unknown";
+  if (lower !== null && lower >= 18) return upper !== null && upper <= 19 ? "18_19" : "adult_unbounded";
+  if (lower !== null && lower >= 16) return "16_17";
+  if (lower !== null && lower >= 13) return "13_15";
+  // A range reaching below 13 might be a child: stop rather than guess.
+  if (lower !== null) return "under_13";
+  // Only an upper bound of 13 or more: not enough to place them, so ask instead.
+  return "unknown";
+}
+
 // "studio": private making, sharing with family only.
 // "walls": the full app with teen walls.
 export const AppMode = z.enum(["studio", "walls"]);

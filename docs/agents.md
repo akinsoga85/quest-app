@@ -23,7 +23,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 
 | ID | Package | Owns (contract and tables) | Figma | Done when |
 |---|---|---|---|---|
-| A1 | Sign-up, age and consent | `bracketForAge`, `modeFor`, `needsParentConsent`; `parent.invite`, `ai.consent`; tables `teens`, `parents`, `parent_links` | H1, H2, H3, H14a, H22, H24 | Tests pass at ages 12, 14, 16, 18 and 19 in Canada and the US; under-13s stopped; parent link expires after 7 days; store age signal read on both platforms |
+| A1 | Sign-up, age and consent | `bracketForAge`, `bracketFromAgeRange`, `ageFromBirthMonth`, `modeFor`, `needsParentConsent`; `teen.create`, `signup.abandon`, `parent.invite`, `parent.accept`, `ai.consent` (Postgres functions); `private.coach_allowed`; tables `teens`, `parents`, `parent_links`, `app_config` | H1, H2, H3, H14a, H22 | **Built.** Ages 12–19 in Canada and the US tested; under-13s stopped and nothing kept; links expire after 7 days. Store age signal (expo-age-range) still to check on real phones |
 | A2 | Quests and Today | `Quest`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | One quest per zone at local midnight; weekly streak correct across time zones |
 | A3 | Capture and upload | `make.createUpload`; table `makes`; storage bucket `makes` | H6, H23 | No upload keeps location data; uploads resume after a dropped connection; system photo picker on Android |
 | A4 | Coach agent | `CoachReview`, `coachReviewJsonSchema`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`; tables `reviews`, `skill_points` | H7, H16 | Passes the coach test set (Lean V1 tab: "How we know it's good"); no review without `ai_coach_consent` |
@@ -35,6 +35,16 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A10 | Evening drop and notifications | table `notification_prefs` | H11, H19 | Drop at 8 pm local time; no pushes during quiet hours |
 | A11 | Admin and operations | `account.export`, `account.delete`, `DELETION_DAYS`; table `deletion_requests` | H20a, H21 | Quest approval, safety queue, 1% coach spot check, deletion and export all work |
 | A12 | Store release | `apps/mobile/app.json` | — | Listings, privacy labels and age ratings done; internal testing on both stores |
+
+## Status
+
+- **A0 foundation:** done.
+- **A1 sign-up, age and consent:** built on branch `a1-signup`. Left: test the store
+  age signal and both sign-ins on a real iPhone (iOS 26+) and Android phone in a
+  development build. The parent consent web page (H24) is A8's; it calls
+  `accept_parent_invite` after its adult check.
+- **For A3, A4 and A5:** check `private.coach_allowed(teen_id)` before anything
+  leaves the phone: it needs the teen's yes, plus an active parent link for under-18s.
 
 ## Already enforced by the database
 

@@ -16,7 +16,7 @@
     "db:up": "bash scripts/db-local.sh up",
     "db:reset": "bash scripts/db-local.sh reset",
     "db:down": "bash scripts/db-local.sh down",
-    "db:test": "node --test scripts/test-db.mjs",
+    "db:test": "node --test --test-concurrency=1 scripts/test-db.mjs scripts/test-db-a1.mjs",
     "gen:types": "node scripts/gen-db-types.mjs",
     "check": "npm run typecheck && npm run lint && npm run test"
   },

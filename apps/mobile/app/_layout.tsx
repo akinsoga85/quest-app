@@ -11,6 +11,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AccountProvider, useAccount } from "../src/lib/account";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -23,19 +24,50 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
-
   if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <AccountProvider>
+        <Routes />
+      </AccountProvider>
+    </SafeAreaProvider>
+  );
+}
+
+// Each screen is reachable only at its step: sign in, age, ask a parent, app.
+// Changing step (signing in, making a profile, a parent saying yes) moves the
+// teen on automatically.
+function Routes() {
+  const { step } = useAccount();
+
+  useEffect(() => {
+    if (step !== "loading") void SplashScreen.hideAsync();
+  }, [step]);
+
+  if (step === "loading") return null;
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack.Protected guard={step === "welcome"}>
+        <Stack.Screen name="(onboarding)/welcome" />
+      </Stack.Protected>
+      <Stack.Protected guard={step === "age"}>
+        <Stack.Screen name="(onboarding)/age" />
+      </Stack.Protected>
+      <Stack.Protected guard={step === "welcome" || step === "age"}>
+        <Stack.Screen name="stop" />
+      </Stack.Protected>
+      <Stack.Protected guard={step === "parent"}>
+        <Stack.Screen name="(onboarding)/parent" />
+      </Stack.Protected>
+      <Stack.Protected guard={step === "done"}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="make" options={{ presentation: "modal" }} />
-      </Stack>
-    </SafeAreaProvider>
+        <Stack.Screen name="ai-consent" options={{ presentation: "modal" }} />
+        <Stack.Screen name="invite-parent" options={{ presentation: "modal" }} />
+      </Stack.Protected>
+    </Stack>
   );
 }
