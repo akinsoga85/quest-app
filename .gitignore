@@ -11,3 +11,5 @@ coverage/
 ios/
 android/
 supabase/functions/*/*.bundle.mjs
+supabase/.env.production
+supabase/.temp/

@@ -15,7 +15,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `packages/tokens` | Colours, type, spacing and tap sizes from Figma, with contrast tests |
 | `packages/contract` | The shared contract: data shapes, rules and server-function signatures, plus generated database types |
 | `supabase/migrations` | Database schema with row-level security on every table |
-| `supabase/seed.sql` | Zones, skills and a first day of quests |
+| `supabase/seed.sql` | Test quests for local development (never loaded into production) |
 | `scripts/` | Local Postgres, access-rule tests, database type generator |
 | `packages/coach` | The coach agent (A4): knowledge pack, prompts, guardrail checks, server worker and test-set runner |
 | `packages/notify` | The evening drop (A10): who's due, Expo pushes, quiet hours |
@@ -26,6 +26,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `supabase/functions` | Edge functions bundled from the packages by `npm run build:functions` |
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
 | `docs/operations.md` | How staff run things: the safety queue, quest weeks, the coach spot check, deletions |
+| `docs/production-setup.md` | Setting up the production Supabase project |
 | `docs/store-release.md` | Store release (A12): accounts, internal testing, listing, privacy labels, age ratings, release checklist |
 
 ## Run it
@@ -42,7 +43,10 @@ npm run start -w @quest/mobile   # Expo dev server (needs a development build, s
 ```
 
 To connect the app to Supabase, copy `apps/mobile/.env.example` to `.env` and fill
-in the project URL, anon key and parent site URL. Deploy the schema with `supabase db push`.
+in the project URL, anon key and parent site URL. To set up the production
+Supabase project (schema, functions, secrets, schedules), follow
+`docs/production-setup.md`: one script, `scripts/setup-production.sh`, plus a
+few dashboard steps.
 
 The app uses native modules (store age signals, Sign in with Apple), so run it in a
 [development build](https://docs.expo.dev/develop/development-builds/introduction/)
@@ -81,10 +85,8 @@ privacy labels and setting up Plus in the stores, is in `docs/store-release.md`.
   somewhere only staff know about (it's `noindex`); every function behind it
   checks the `staff` table. Add staff as in `docs/operations.md`, and turn on
   Google sign-in for the site's URL in Supabase.
-- **The deletion job**: `npm run build:functions`, `supabase functions deploy
-  account-deletions --no-verify-jwt`, set `DELETIONS_WEBHOOK_SECRET` (and
-  `STRIPE_SECRET_KEY` once Plus is sold on the web), and add a daily schedule
-  that POSTs with the header `x-deletions-secret`.
+- **The deletion job** (`account-deletions`) runs daily; it's deployed and
+  scheduled by `scripts/setup-production.sh`.
 
 ## The evening drop (A10)
 
@@ -95,9 +97,7 @@ default), saying what the day earned; it never arrives in quiet hours (9 pm to
 screen, which is also in the You tab.
 
 To deploy: run `eas init` so the app has an EAS project id (push tokens need
-it), `npm run build:functions`, `supabase functions deploy evening-drop
---no-verify-jwt`, set `DROP_WEBHOOK_SECRET`, and add a schedule that POSTs
-every 10 minutes with the header `x-drop-secret`.
+it). The function and its schedule come with `scripts/setup-production.sh`.
 
 ## Plus and payments (A9)
 
@@ -158,9 +158,8 @@ schedules them Monday to Sunday.
 npm run quests -- draft --zone photography --week 2026-11-09   # prints a draft; saves nothing; costs money
 ```
 
-To deploy: `npm run build:functions`, `supabase functions deploy quest-writer
---no-verify-jwt`, set `ANTHROPIC_API_KEY` and `QUESTS_WEBHOOK_SECRET`, and add
-a weekly schedule that POSTs `{}` with the header `x-quests-secret`.
+To deploy: `scripts/setup-production.sh` deploys it and schedules it weekly
+(Mondays); it needs `ANTHROPIC_API_KEY` in `supabase/.env.production`.
 
 ## The safety scan (A5)
 
@@ -179,10 +178,9 @@ nothing, so photos wait and nothing reaches the coach. For staging only,
 `SAFETY_VENDORS=test` uses exact-hash matching against `SAFETY_TEST_HASHES`
 and a classifier that flags nothing; every scan records which vendor decided.
 
-To deploy: `npm run build:functions`, `supabase functions deploy safety-scan
---no-verify-jwt`, set `SAFETY_WEBHOOK_SECRET`, add a database webhook on
-`makes` INSERT (header `x-safety-secret`), and a schedule that POSTs `{}`
-every minute.
+To deploy: `scripts/setup-production.sh`. A database trigger calls it for
+each new photo, and a schedule sweeps every 5 minutes (migration
+`20261114120100_production_wiring.sql`).
 
 ## The coach (A4)
 
@@ -202,18 +200,12 @@ every hard case right, and 90% of outcomes right. The sample set is drawn
 stand-ins; the mentor sprint adds the real 500-photo set per zone. Change the
 models or effort with `COACH_MODEL`, `COACH_GUARD_MODEL` and `COACH_EFFORT`.
 
-To deploy:
-
-1. `npm run build:functions`, then `supabase functions deploy coach-review --no-verify-jwt`.
-2. `supabase secrets set ANTHROPIC_API_KEY=... COACH_WEBHOOK_SECRET=<random>`.
-3. Database → Webhooks: on `makes` UPDATE, POST to the function's URL with the
-   header `x-coach-secret: <the secret>`. The function only acts on rows whose
-   status is `reviewing` (set by the safety scan, A5).
-4. A schedule (Supabase Cron) that POSTs `{}` to the same URL every minute, to pick up
-   anything missed or waiting for consent.
+To deploy: `scripts/setup-production.sh`. A database trigger calls it when a
+photo passes the safety scan, and a schedule sweeps every 5 minutes for
+anything missed or waiting for consent.
 
 ## Before the first store build
 
 - Replace the working name, `com.example.quest` bundle IDs and the `quest` URL scheme in `apps/mobile/app.json` once the name is cleared.
-- The skills for Fashion, Art and crafts, Music and Words are drafts for the mentor sprint to confirm (`packages/contract/src/zones.ts` and `supabase/seed.sql` must match; `npm run db:test` checks this).
+- The skills for Fashion, Art and crafts, Music and Words are drafts for the mentor sprint to confirm (`packages/contract/src/zones.ts` and the migration `20261114120000_reference_data.sql` must match; `npm run db:test` checks this).
 - Level thresholds in `packages/contract/src/levels.ts` are a first guess to tune in the pilot.
