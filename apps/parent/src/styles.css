@@ -45,6 +45,7 @@ p { margin: 0; }
 .btn:disabled { opacity: 0.4; cursor: default; }
 .btn.primary { background: var(--lime); color: var(--lime-ink); }
 .btn.white { background: #fff; color: #000; }
+.btn.danger-fill { background: var(--danger); color: var(--lime-ink); }
 .btn:focus-visible, .pill:focus-visible, input:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
 .pill { white-space: nowrap; min-height: 44px; border: 1px solid var(--border); border-radius: 999px; padding: 0 14px; background: var(--surface2); color: var(--text); font: 600 14px Inter; cursor: pointer; }
 .pill.on { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }

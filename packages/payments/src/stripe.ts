@@ -16,7 +16,7 @@ export async function verifyStripeSignature(rawBody: string, header: string | nu
   return sigs.some((s) => s.length === expected.length && [...s].reduce((d, c, i) => d | (c.charCodeAt(0) ^ expected.charCodeAt(i)), 0) === 0);
 }
 
-export type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+export type Fetch = (url: string, init: { method?: string; headers: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
 // Stripe's form encoding: nested keys in brackets.
 export function formEncode(params: Record<string, string | number | undefined>): string {
@@ -68,4 +68,32 @@ export function createCheckout(fetch: Fetch, secretKey: string, p: CheckoutParam
 // Stripe's own page to change the card, see receipts or cancel.
 export function createPortal(fetch: Fetch, secretKey: string, customerId: string, returnUrl: string): Promise<{ url: string }> {
   return stripePost(fetch, secretKey, "billing_portal/sessions", { customer: customerId, return_url: returnUrl });
+}
+
+const LIVE = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);
+
+// When an account is deleted (A11), any web Plus it paid for or received
+// stops at once: subscriptions carry metadata.teen_id and metadata.parent_id.
+// Returns how many were cancelled. (App Store and Google Play subscriptions
+// are cancelled by the person in their phone's settings.)
+export async function cancelSubscriptionsFor(fetch: Fetch, secretKey: string, userId: string): Promise<number> {
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new Error("not an account id");
+  const auth = { Authorization: `Bearer ${secretKey}` };
+  const ids = new Set<string>();
+  // Stripe search can't mix AND and OR, so one search per field.
+  for (const field of ["teen_id", "parent_id"]) {
+    const query = encodeURIComponent(`metadata['${field}']:'${userId}'`);
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/search?limit=100&query=${query}`, { headers: auth });
+    const body = (await res.json()) as { data?: { id: string; status: string }[]; error?: { message?: string } };
+    if (!res.ok || !body.data) throw new Error(`Stripe subscriptions/search: ${body.error?.message ?? res.status}`);
+    for (const s of body.data) if (LIVE.has(s.status)) ids.add(s.id);
+  }
+  for (const id of ids) {
+    const res = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(id)}`, { method: "DELETE", headers: auth });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(`Stripe cancel ${id}: ${body.error?.message ?? res.status}`);
+    }
+  }
+  return ids.size;
 }

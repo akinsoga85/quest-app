@@ -1,7 +1,7 @@
 import type { EntitlementEvent } from "@quest/contract";
 import { describe, expect, it, vi } from "vitest";
 import { handlePayments, type Parent, type PaymentsDeps } from "./handler";
-import { formEncode, verifyStripeSignature, type Fetch } from "./stripe";
+import { cancelSubscriptionsFor, formEncode, verifyStripeSignature, type Fetch } from "./stripe";
 
 const TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
 const OTHER_TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a12";
@@ -25,7 +25,7 @@ function deps(over: Partial<PaymentsDeps> = {}): PaymentsDeps & { applied: Entit
   const applied: EntitlementEvent[] = [];
   const calls: { url: string; body: string }[] = [];
   const fetch: Fetch = async (url, init) => {
-    calls.push({ url, body: init.body });
+    calls.push({ url, body: init.body ?? "" });
     return { ok: true, status: 200, json: async () => ({ url: "https://checkout.stripe.com/c/pay/cs_test_1" }) };
   };
   return {
@@ -127,5 +127,32 @@ describe("Stripe helpers", () => {
     expect(await verifyStripeSignature("{}", await sign("{}", 1000), env.STRIPE_WEBHOOK_SECRET, 1400)).toBe(false);
     expect(await verifyStripeSignature("{ }", await sign("{}", 1000), env.STRIPE_WEBHOOK_SECRET, 1000)).toBe(false);
     expect(await verifyStripeSignature("{}", null, env.STRIPE_WEBHOOK_SECRET, 1000)).toBe(false);
+  });
+});
+
+describe("cancelling Plus when an account is deleted (A11)", () => {
+  const user = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
+  it("finds subscriptions by teen and by parent, and cancels the live ones once", async () => {
+    const calls: string[] = [];
+    const fetch = (async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${decodeURIComponent(url)}`);
+      if (url.includes("/search")) {
+        const byTeen = decodeURIComponent(url).includes("teen_id");
+        const data = byTeen
+          ? [{ id: "sub_1", status: "active" }, { id: "sub_old", status: "canceled" }]
+          : [{ id: "sub_1", status: "active" }, { id: "sub_2", status: "past_due" }];
+        return new Response(JSON.stringify({ data }), { status: 200 });
+      }
+      return new Response("{}", { status: 200 });
+    }) as Fetch;
+    expect(await cancelSubscriptionsFor(fetch, "sk_test", user)).toBe(2);
+    expect(calls.filter((c) => c.startsWith("DELETE"))).toEqual(["DELETE https://api.stripe.com/v1/subscriptions/sub_1", "DELETE https://api.stripe.com/v1/subscriptions/sub_2"]);
+    expect(calls[0]).toContain(`metadata['teen_id']:'${user}'`);
+  });
+
+  it("fails loudly, so the deletion waits and tries again", async () => {
+    const fetch = (async () => new Response(JSON.stringify({ error: { message: "down" } }), { status: 500 })) as Fetch;
+    await expect(cancelSubscriptionsFor(fetch, "sk_test", user)).rejects.toThrow(/down/);
+    await expect(cancelSubscriptionsFor(fetch, "sk_test", "x' OR 1")).rejects.toThrow(/account id/);
   });
 });

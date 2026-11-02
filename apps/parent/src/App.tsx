@@ -1,4 +1,4 @@
-import { Api, PLUS, type InvitePreview, type ParentFeedItem, type ParentOverview, type ParentPlus } from "@quest/contract";
+import { Api, DELETION_DAYS, PHOTO_LINK_SECONDS, PLUS, exportFileName, photoPaths, withPhotoLinks, type DeletionRequest, type InvitePreview, type ParentFeedItem, type ParentOverview, type ParentPlus } from "@quest/contract";
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { CHEERS, bestZone, plusLine, questsLine, route, shortDay, signInRedirect } from "./logic";
@@ -27,6 +27,7 @@ export function App() {
     );
   }
   if (!ready) return <main aria-busy="true" />;
+  if (r.page === "delete") return <DeleteAccount session={session} />;
   return r.page === "consent" ? <Consent token={r.token} session={session} /> : <Home session={session} />;
 }
 
@@ -323,6 +324,113 @@ function Home({ session }: { session: Session | null }) {
         </section>
       ) : null}
       <p className="muted small">We never sell data or show ads. There are no messages and no comments, only cheers.</p>
+      <a className="link small" href="/delete">
+        Download your data or delete your account
+      </a>
+    </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// /delete: download your data, or delete your account (A11). For parents, and
+// for teens on the web: Google Play lists this page as the deletion link.
+
+function DeleteAccount({ session }: { session: Session | null }) {
+  const [pending, setPending] = useState<DeletionRequest | null | undefined>(undefined);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session) void supabase.rpc("my_deletion").then(({ data }) => setPending(Api["account.deletion"].output.safeParse(data).data ?? null));
+  }, [session]);
+
+  const download = async () => {
+    setError(null);
+    const { data, error: e } = await supabase.rpc("export_my_data");
+    const parsed = Api["account.export"].output.safeParse(data);
+    if (e || !parsed.success) {
+      setError(e && /nothing to export/.test(e.message) ? "There's nothing saved for this account." : "Couldn't gather your data. Try again.");
+      return;
+    }
+    const links: Record<string, string> = {};
+    const paths = photoPaths(parsed.data);
+    for (let i = 0; i < paths.length; i += 100) {
+      const { data: signed } = await supabase.storage.from("makes").createSignedUrls(paths.slice(i, i + 100), PHOTO_LINK_SECONDS);
+      for (const s of signed ?? []) if (s.path && s.signedUrl) links[s.path] = s.signedUrl;
+    }
+    const profile = parsed.data.profile as { handle?: string; name?: string } | undefined;
+    const blob = new Blob([JSON.stringify(withPhotoLinks(parsed.data, links), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = exportFileName(profile?.handle ?? "parent", parsed.data.exportedAt);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const request = async () => {
+    setBusy(true);
+    setError(null);
+    const { data, error: e } = await supabase.rpc("request_account_deletion");
+    setBusy(false);
+    const parsed = Api["account.delete"].output.safeParse(data);
+    if (e || !parsed.success) setError("Couldn't start the deletion. Try again.");
+    else setPending(parsed.data);
+  };
+
+  const keep = async () => {
+    setBusy(true);
+    const { error: e } = await supabase.rpc("cancel_account_deletion");
+    setBusy(false);
+    if (e) setError("Couldn't cancel. Try again.");
+    else setPending(null);
+  };
+
+  return (
+    <main>
+      <p className="eyebrow">Your account</p>
+      <h1>Download your data or delete your account</h1>
+      <section className="card" aria-labelledby="what">
+        <h2 id="what">What deleting does</h2>
+        <ul className="list">
+          <li><span className="num">1</span>Everything is deleted: for a teen, their photos, reviews, levels and postcards; for a parent, their links and cheers.</li>
+          <li><span className="num">2</span>You have 7 days to change your mind. After that it's gone for good, within {DELETION_DAYS} days at most.</li>
+          <li><span className="num">3</span>Plus bought here stops when the account is deleted. Plus from the App Store or Google Play is cancelled in the phone's subscriptions.</li>
+        </ul>
+        <p className="muted small">Teens can also do this in the app: You, then Delete my account. A parent's account and their teen's account are separate: deleting one leaves the other.</p>
+      </section>
+      {!session ? (
+        <SignIn title="Sign in with the account to download or delete" />
+      ) : pending === undefined ? null : (
+        <>
+          <p className="muted small">Signed in as {session.user.email ?? "you"}.</p>
+          {error ? <p className="error" role="alert">{error}</p> : null}
+          <button className="btn" onClick={() => void download()}>
+            Download my data
+          </button>
+          {pending ? (
+            <section className="card" role="status">
+              <h2>Your account will be deleted after {shortDay(pending.deletesAfter.slice(0, 10))}</h2>
+              <p className="text2 small">Until then you can keep it.</p>
+              <button className="btn primary" disabled={busy} onClick={() => void keep()}>
+                Keep my account
+              </button>
+            </section>
+          ) : (
+            <>
+              <label className="check">
+                <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />I understand this deletes my account and everything in it
+              </label>
+              <button className="btn danger-fill" disabled={!confirm || busy} onClick={() => void request()}>
+                Delete my account
+              </button>
+            </>
+          )}
+          <button className="link" onClick={() => void supabase.auth.signOut()}>
+            Sign out
+          </button>
+        </>
+      )}
     </main>
   );
 }

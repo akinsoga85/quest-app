@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AdminDeletion, AdminWeek, DataExport, DeletionRequest, Grade, QueueItem, SafetyResolution, SpotCheckItem } from "./admin";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { ReviewState } from "./review";
 import { Cheer, FamilyStatus, InvitePreview, ParentFeedItem, ParentOverview } from "./family";
@@ -227,14 +228,37 @@ export const Api = {
   },
   "account.export": {
     owner: "A11",
+    rpc: "export_my_data",
+    // The app adds short-lived links to each photo and offers it as a file.
     input: z.object({}),
-    output: z.object({ downloadUrl: z.url(), expiresAt: z.iso.datetime() }),
+    output: DataExport,
   },
   "account.delete": {
     owner: "A11",
+    rpc: "request_account_deletion",
+    // Deleted after 7 days (cancellable until then), always within DELETION_DAYS.
     input: z.object({}),
-    output: z.object({ requestId: z.uuid(), completesBy: z.iso.datetime() }),
+    output: DeletionRequest,
   },
+  "account.cancelDelete": {
+    owner: "A11",
+    rpc: "cancel_account_deletion",
+    input: z.object({}),
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "account.deletion": {
+    owner: "A11",
+    rpc: "my_deletion",
+    input: z.object({}),
+    output: DeletionRequest.nullable(),
+  },
+  "admin.weeks": { owner: "A11", rpc: "admin_quest_weeks", input: z.object({ status: z.enum(["draft", "approved", "rejected"]) }), output: z.array(AdminWeek) },
+  "admin.decideWeek": { owner: "A11", rpc: "admin_decide_week", input: z.object({ weekId: z.uuid(), approve: z.boolean(), note: z.string().nullable() }), output: z.object({ ok: z.literal(true) }) },
+  "admin.safetyQueue": { owner: "A11", rpc: "admin_safety_queue", input: z.object({}), output: z.array(QueueItem) },
+  "admin.resolveSafety": { owner: "A11", rpc: "admin_resolve_safety", input: z.object({ itemId: z.uuid(), resolution: SafetyResolution }), output: z.string().nullable() },
+  "admin.spotCheck": { owner: "A11", rpc: "admin_spot_check", input: z.object({ weekOf: z.iso.date() }), output: z.array(SpotCheckItem) },
+  "admin.grade": { owner: "A11", rpc: "admin_grade_review", input: Grade, output: z.object({ ok: z.literal(true) }) },
+  "admin.deletions": { owner: "A11", rpc: "admin_deletions", input: z.object({}), output: z.array(AdminDeletion) },
 } as const;
 
 export type ApiName = keyof typeof Api;

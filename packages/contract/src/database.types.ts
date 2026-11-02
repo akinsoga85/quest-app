@@ -82,6 +82,8 @@ export type Database = {
           requested_at: string
           completes_by: string
           completed_at: string | null
+          cancelled_at: string | null
+          held_reason: string | null
         }
         Insert: {
           id?: string
@@ -89,6 +91,8 @@ export type Database = {
           requested_at?: string
           completes_by?: string
           completed_at?: string | null
+          cancelled_at?: string | null
+          held_reason?: string | null
         }
         Update: {
           id?: string
@@ -96,6 +100,8 @@ export type Database = {
           requested_at?: string
           completes_by?: string
           completed_at?: string | null
+          cancelled_at?: string | null
+          held_reason?: string | null
         }
         Relationships: []
       }
@@ -667,6 +673,50 @@ export type Database = {
           },
         ]
       }
+      review_grades: {
+        Row: {
+          review_id: string
+          grader: string
+          specific: number
+          accurate: number
+          kind: number
+          actionable: number
+          guardrail_break: boolean
+          note: string | null
+          created_at: string
+        }
+        Insert: {
+          review_id: string
+          grader: string
+          specific: number
+          accurate: number
+          kind: number
+          actionable: number
+          guardrail_break: boolean
+          note?: string | null
+          created_at?: string
+        }
+        Update: {
+          review_id?: string
+          grader?: string
+          specific?: number
+          accurate?: number
+          kind?: number
+          actionable?: number
+          guardrail_break?: boolean
+          note?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_grades_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           id: string
@@ -881,6 +931,27 @@ export type Database = {
           },
         ]
       }
+      staff: {
+        Row: {
+          user_id: string
+          email: string
+          role: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          email: string
+          role: string
+          created_at?: string
+        }
+        Update: {
+          user_id?: string
+          email?: string
+          role?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       teen_zones: {
         Row: {
           teen_id: string
@@ -997,6 +1068,34 @@ export type Database = {
         Args: { p_token: string }
         Returns: { teen_handle: string }[]
       }
+      admin_decide_week: {
+        Args: { p_week_id: string; p_approve: boolean; p_note?: string }
+        Returns: undefined
+      }
+      admin_deletions: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      admin_grade_review: {
+        Args: { p_review: string; p_specific: number; p_accurate: number; p_kind: number; p_actionable: number; p_guardrail_break: boolean; p_note: string }
+        Returns: undefined
+      }
+      admin_quest_weeks: {
+        Args: { p_status?: Database["public"]["Enums"]["week_status"] }
+        Returns: Json
+      }
+      admin_resolve_safety: {
+        Args: { p_item: string; p_resolution: string }
+        Returns: string
+      }
+      admin_safety_queue: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      admin_spot_check: {
+        Args: { p_week_of: string }
+        Returns: Json
+      }
       apply_entitlement_event: {
         Args: { p_event_id: string; p_teen_id: string; p_source: Database["public"]["Enums"]["entitlement_source"]; p_kind: Database["public"]["Enums"]["entitlement_kind"]; p_active_until: string; p_sandbox: boolean }
         Returns: string
@@ -1008,6 +1107,10 @@ export type Database = {
       billing_customer_for: {
         Args: { p_parent_id: string }
         Returns: string
+      }
+      cancel_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       cheer_share: {
         Args: { p_share_id: string; p_cheer: Database["public"]["Enums"]["cheer"] }
@@ -1029,6 +1132,10 @@ export type Database = {
         Args: { p_make_id: string; p_review: Json; p_model: string; p_prompt_version: string }
         Returns: string
       }
+      complete_deletion: {
+        Args: { p_user: string }
+        Returns: undefined
+      }
       confirm_adult: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1045,8 +1152,16 @@ export type Database = {
         Args: { p_make_id: string }
         Returns: string
       }
+      deletions_due: {
+        Args: { p_now?: string }
+        Returns: Json
+      }
       drop_candidates: {
         Args: { p_now?: string }
+        Returns: Json
+      }
+      export_my_data: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       get_drop: {
@@ -1088,6 +1203,10 @@ export type Database = {
       mark_postcards_seen: {
         Args: { p_ids: string[] }
         Returns: undefined
+      }
+      my_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       parent_feed: {
         Args: { p_before?: string; p_limit?: number }
@@ -1136,6 +1255,10 @@ export type Database = {
       remove_push_token: {
         Args: { p_token: string }
         Returns: undefined
+      }
+      request_account_deletion: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       save_billing_customer: {
         Args: { p_parent_id: string; p_customer_id: string }
