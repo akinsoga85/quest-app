@@ -17,6 +17,8 @@ import {
   reviewGuardrailIssues,
   skillIdsFor,
   CoachClaim,
+  SAFETY_THRESHOLDS,
+  decideScan,
   LESSONS,
   Lesson,
   lessonById,
@@ -427,5 +429,31 @@ describe("A4: coach reviews and lessons", () => {
     expect(CoachClaim.parse(null)).toBeNull();
     expect(() => CoachClaim.parse({ consent: false, context: {} })).not.toThrow(); // extra keys are dropped…
     expect(CoachClaim.parse({ consent: false, context: {} })).toEqual({ consent: false }); // …so no context leaks through
+  });
+});
+
+describe("A5: the safety decision", () => {
+  it("blocks any hash match, whatever the classifier says", () => {
+    expect(decideScan({ hashMatches: ["test-1"], labels: {} })).toEqual({ result: "block", reasons: ["hash_match:test-1"] });
+    expect(decideScan({ hashMatches: ["a", "b"], labels: { sexual: 0 } }).result).toBe("block");
+  });
+
+  it("blocks clearly sexual content and holds borderline photos for a person", () => {
+    expect(decideScan({ hashMatches: [], labels: { sexual: 0.85 } }).result).toBe("block");
+    expect(decideScan({ hashMatches: [], labels: { nudity: 0.35 } })).toEqual({ result: "human_review", reasons: ["nudity:0.35"] });
+    expect(decideScan({ hashMatches: [], labels: { nudity: 0.1, violence: 0.2 } })).toEqual({ result: "pass", reasons: [] });
+  });
+
+  it("always sends self-harm signs to a person, never just blocks them", () => {
+    expect(decideScan({ hashMatches: [], labels: { self_harm: 0.99 } }).result).toBe("human_review");
+    expect(SAFETY_THRESHOLDS.self_harm.block).toBeNull();
+  });
+
+  it("keeps the strongest result and every reason", () => {
+    expect(decideScan({ hashMatches: [], labels: { weapon: 0.6, sexual: 0.9 } })).toEqual({ result: "block", reasons: ["sexual:0.90", "weapon:0.60"] });
+  });
+
+  it("isn't something the app can call", () => {
+    expect(Object.keys(Api)).not.toContain("make.submit");
   });
 });
