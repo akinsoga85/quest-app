@@ -63,6 +63,7 @@ export default function TodayScreen() {
       error={error}
       saving={uploads.pending}
       onOpen={openQuest}
+      onReview={(makeId) => router.push({ pathname: "/review/[makeId]", params: { makeId } })}
       onRetry={uploads.retry}
       onDiscard={(id) => void uploads.discard(id)}
     />

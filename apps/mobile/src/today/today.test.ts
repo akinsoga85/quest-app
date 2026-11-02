@@ -25,9 +25,9 @@ const quest = (zone: "photography" | "fashion" | "art_crafts", id: string) => ({
 });
 
 const zones: TodayZone[] = [
-  { zone: "photography", points: 30, madeToday: true, quest: quest("photography", "00000000-0000-4000-8000-000000000001") },
-  { zone: "fashion", points: 12, madeToday: false, quest: quest("fashion", "00000000-0000-4000-8000-000000000002") },
-  { zone: "art_crafts", points: 0, madeToday: false, quest: null },
+  { zone: "photography", points: 30, madeToday: true, quest: quest("photography", "00000000-0000-4000-8000-000000000001"), make: { id: "00000000-0000-4000-8000-0000000000a1", status: "reviewed" } },
+  { zone: "fashion", points: 12, madeToday: false, quest: quest("fashion", "00000000-0000-4000-8000-000000000002"), make: null },
+  { zone: "art_crafts", points: 0, madeToday: false, quest: null, make: null },
 ];
 
 const today: Today = {

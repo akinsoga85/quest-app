@@ -10,6 +10,7 @@ export default tseslint.config(
       "**/dist/**",
       "**/dist-check/**",
       "packages/contract/src/database.types.ts",
+      "supabase/functions/**/*.bundle.mjs",
     ],
   },
   js.configs.recommended,

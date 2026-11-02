@@ -3,6 +3,7 @@ export * from "./age";
 export * from "./quest";
 export * from "./today";
 export * from "./photo";
+export * from "./lessons";
 export * from "./review";
 export * from "./levels";
 export * from "./family";

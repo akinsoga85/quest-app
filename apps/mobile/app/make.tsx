@@ -80,10 +80,10 @@ export default function Make() {
     if (!draft || !quest) return;
     setBusy(true);
     try {
-      await uploads.save(draft.bytes, { id: quest.id, zone: quest.zone });
+      const makeId = await uploads.save(draft.bytes, { id: quest.id, zone: quest.zone });
       draft.file.delete();
       setDraft(null);
-      router.back();
+      router.replace({ pathname: "/review/[makeId]", params: { makeId } }); // the coach's review comes here
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't keep this photo. Try again.");
       setBusy(false);

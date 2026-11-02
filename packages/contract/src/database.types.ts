@@ -20,6 +20,35 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_flags: {
+        Row: {
+          make_id: string
+          note: string
+          model: string
+          created_at: string
+        }
+        Insert: {
+          make_id: string
+          note: string
+          model: string
+          created_at?: string
+        }
+        Update: {
+          make_id?: string
+          note?: string
+          model?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_flags_make_id_fkey"
+            columns: ["make_id"]
+            isOneToOne: true
+            referencedRelation: "makes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deletion_requests: {
         Row: {
           id: string
@@ -167,6 +196,9 @@ export type Database = {
           status: Database["public"]["Enums"]["make_status"]
           created_at: string
           local_day: string
+          coach_note: string | null
+          coach_lesson_id: string | null
+          review_started_at: string | null
         }
         Insert: {
           id?: string
@@ -176,6 +208,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["make_status"]
           created_at?: string
           local_day?: string
+          coach_note?: string | null
+          coach_lesson_id?: string | null
+          review_started_at?: string | null
         }
         Update: {
           id?: string
@@ -185,6 +220,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["make_status"]
           created_at?: string
           local_day?: string
+          coach_note?: string | null
+          coach_lesson_id?: string | null
+          review_started_at?: string | null
         }
         Relationships: [
           {
@@ -729,6 +767,22 @@ export type Database = {
         Args: { p_token: string }
         Returns: { teen_handle: string }[]
       }
+      coach_claim: {
+        Args: { p_make_id: string }
+        Returns: Json
+      }
+      coach_pending: {
+        Args: { p_limit?: number }
+        Returns: string[]
+      }
+      coach_save_outcome: {
+        Args: { p_make_id: string; p_outcome: string; p_note: string; p_lesson_id: string; p_model: string }
+        Returns: undefined
+      }
+      coach_save_review: {
+        Args: { p_make_id: string; p_review: Json; p_model: string; p_prompt_version: string }
+        Returns: string
+      }
       create_parent_invite: {
         Args: Record<PropertyKey, never>
         Returns: { token: string; expires_at: string }[]
@@ -737,9 +791,17 @@ export type Database = {
         Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string }
         Returns: { handle: string; mode: Database["public"]["Enums"]["app_mode"]; needs_parent: boolean }[]
       }
+      get_review: {
+        Args: { p_make_id: string }
+        Returns: Json
+      }
       get_today: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      rate_review: {
+        Args: { p_review_id: string; p_helpful: boolean }
+        Returns: undefined
       }
       record_make: {
         Args: { p_make_id: string; p_quest_id: string; p_captured_at: string }
@@ -761,7 +823,7 @@ export type Database = {
       cheer: "great_light" | "great_framing" | "great_moment" | "clever_idea" | "love_this"
       entitlement_source: "app_store" | "google_play" | "web"
       link_status: "pending" | "active" | "revoked"
-      make_status: "uploaded" | "scanning" | "blocked" | "held_for_review" | "reviewing" | "reviewed"
+      make_status: "uploaded" | "scanning" | "blocked" | "held_for_review" | "reviewing" | "reviewed" | "retake" | "no_review"
       quest_status: "draft" | "approved" | "retired"
       scan_result: "pass" | "block" | "human_review"
       zone_status: "live" | "coming" | "off"

@@ -58,3 +58,41 @@ export function reviewGuardrailIssues(r: CoachReview): GuardrailIssue[] {
   }
   return issues;
 }
+
+// What the server hands the coach for one make (coach_claim). Nothing
+// personal: no handle, age or place, only the quest and the teen's craft history.
+export const CoachContext = z.object({
+  makeId: z.uuid(),
+  storagePath: z.string(),
+  zone: z.string(),
+  quest: z.object({ title: z.string(), brief: z.string(), trainsSkill: SkillId, tips: z.array(z.string()) }),
+  zonePoints: z.number().int().min(0), // for levelFor(): the coach matches its words to the level
+  history: z.object({
+    questsDone: z.number().int().min(0), // in this zone, before this one
+    skillPoints: z.record(z.string(), z.number().int().min(0)), // per skill in this zone
+    recentTips: z.array(z.string()).max(5), // the last five "try next" tips, newest first
+  }),
+});
+export type CoachContext = z.infer<typeof CoachContext>;
+
+// coach_claim's answer: null when there's nothing to do (not ready, already
+// reviewed, or another worker has it).
+export const CoachClaim = z
+  .discriminatedUnion("consent", [z.object({ consent: z.literal(false) }), z.object({ consent: z.literal(true), context: CoachContext })])
+  .nullable();
+export type CoachClaim = z.infer<typeof CoachClaim>;
+
+// What the coach decided, besides a review.
+export const CoachOutcome = z.enum(["retake", "concern", "unavailable"]);
+export type CoachOutcome = z.infer<typeof CoachOutcome>;
+
+// The review screen (H16) asks for this; see review.forMake in api.ts.
+export const ReviewState = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("pending") }),
+  z.object({ state: z.literal("no_consent") }),
+  z.object({ state: z.literal("ready"), reviewId: z.uuid(), review: CoachReview, helpful: z.boolean().nullable() }),
+  z.object({ state: z.literal("retake"), reason: z.string() }),
+  z.object({ state: z.literal("unavailable"), lessonId: z.string().nullable() }), // the coach couldn't finish; a lesson instead
+  z.object({ state: z.literal("held") }), // a person checks it first (safety)
+]);
+export type ReviewState = z.infer<typeof ReviewState>;

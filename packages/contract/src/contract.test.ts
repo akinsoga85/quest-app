@@ -16,6 +16,12 @@ import {
   questRuleProblems,
   reviewGuardrailIssues,
   skillIdsFor,
+  CoachClaim,
+  LESSONS,
+  Lesson,
+  lessonById,
+  lessonsForSkill,
+  lessonsForZone,
   MAKING_DAYS_PER_WEEK,
   MAKE_UPLOAD_WINDOW_HOURS,
   PHOTO,
@@ -279,6 +285,7 @@ describe("A2: local days, weeks and the gentle streak", () => {
           zone: "photography",
           points: 12,
           madeToday: false,
+          make: null,
           quest: {
             id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11",
             zone: "photography",
@@ -289,7 +296,7 @@ describe("A2: local days, weeks and the gentle streak", () => {
             tips: ["Side light makes longer shadows"],
           },
         },
-        { zone: "fashion", points: 0, madeToday: false, quest: null },
+        { zone: "fashion", points: 0, madeToday: false, quest: null, make: null },
       ],
       week: { start: "2025-11-03", madeDays: ["2025-11-03"] },
       streakWeeks: 6,
@@ -371,5 +378,54 @@ describe("A3: photos", () => {
     const ok = { makeId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", questId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a12", capturedAt: "2026-11-01T08:00:00-07:00" };
     expect(Api["make.record"].input.safeParse(ok).success).toBe(true);
     expect(Api["make.record"].input.safeParse({ ...ok, capturedAt: "yesterday" }).success).toBe(false);
+  });
+});
+
+describe("A4: coach reviews and lessons", () => {
+  it("has one starter lesson for every skill in the live zones", () => {
+    for (const [zone, z] of Object.entries(ZONES)) {
+      if (z.status !== "live") continue;
+      for (const skill of skillIdsFor(zone as keyof typeof ZONES)) {
+        const lessons = lessonsForSkill(skill);
+        expect(lessons, skill).toHaveLength(1);
+        expect(lessons[0]!.id.startsWith(`${skill}.`)).toBe(true);
+        expect(lessons[0]!.zone).toBe(zone);
+      }
+    }
+    for (const l of LESSONS) expect(Lesson.parse(l)).toEqual(l);
+    expect(lessonById("photography.framing.leading-lines")?.title).toBe("Leading lines");
+    expect(lessonById("nope")).toBeNull();
+    expect(lessonsForZone("fashion")).toHaveLength(4);
+  });
+
+  it("describes every state of a make's review", () => {
+    const parse = (v: unknown) => Api["review.forMake"].output.parse(v);
+    expect(parse({ state: "no_consent" }).state).toBe("no_consent");
+    expect(parse({ state: "retake", reason: "Too blurry to see the shadows." }).state).toBe("retake");
+    expect(parse({ state: "unavailable", lessonId: null }).state).toBe("unavailable");
+    expect(parse({ state: "held" }).state).toBe("held");
+    const ready = parse({
+      state: "ready",
+      reviewId: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11",
+      helpful: null,
+      review: {
+        worked: "The blind throws clean diagonal stripes across the wall.",
+        tryNext: "Get lower and tilt up so the stripes run in from a corner.",
+        why: "Diagonals pull the eye through.",
+        question: null,
+        skillPoints: [{ skill: "photography.light", points: 1 }],
+        lessonId: "photography.framing.leading-lines",
+        confidence: 0.8,
+      },
+    });
+    expect(ready.state).toBe("ready");
+    expect(() => parse({ state: "ready" })).toThrow();
+  });
+
+  it("gives the coach nothing without consent", () => {
+    expect(CoachClaim.parse({ consent: false })).toEqual({ consent: false });
+    expect(CoachClaim.parse(null)).toBeNull();
+    expect(() => CoachClaim.parse({ consent: false, context: {} })).not.toThrow(); // extra keys are dropped…
+    expect(CoachClaim.parse({ consent: false, context: {} })).toEqual({ consent: false }); // …so no context leaks through
   });
 });

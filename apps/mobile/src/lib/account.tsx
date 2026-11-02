@@ -11,6 +11,7 @@ export interface Teen {
   ageBracket: AgeBracket;
   mode: AppMode;
   aiCoachConsent: boolean;
+  country: string; // two-letter code, for the right helplines
 }
 
 export interface ParentLink {
@@ -65,13 +66,13 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const [teenRes, linksRes, zonesRes, waitingValue] = await Promise.all([
-      supabase.from("teens").select("id, handle, age_bracket, mode, ai_coach_consent").eq("id", userId).maybeSingle(),
+      supabase.from("teens").select("id, handle, age_bracket, mode, ai_coach_consent, country").eq("id", userId).maybeSingle(),
       supabase.from("parent_links").select("status, invite_expires_at, created_at").eq("teen_id", userId).order("created_at", { ascending: false }),
       supabase.from("teen_zones").select("zone_id").eq("teen_id", userId),
       SecureStore.getItemAsync(waitingKey(userId)),
     ]);
     const t = teenRes.data;
-    setTeen(t ? { id: t.id, handle: t.handle, ageBracket: t.age_bracket, mode: t.mode, aiCoachConsent: t.ai_coach_consent } : null);
+    setTeen(t ? { id: t.id, handle: t.handle, ageBracket: t.age_bracket, mode: t.mode, aiCoachConsent: t.ai_coach_consent, country: t.country } : null);
     setParentLinks((linksRes.data ?? []).map((l) => ({ status: l.status, inviteExpiresAt: l.invite_expires_at, createdAt: l.created_at })));
     const picked = new Set((zonesRes.data ?? []).map((z) => z.zone_id));
     setZones((Object.keys(ZONES) as ZoneId[]).filter((z) => picked.has(z)));

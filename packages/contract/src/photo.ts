@@ -3,7 +3,9 @@ import { z } from "zod";
 // Photos for makes: one per quest, cropped to 4:5 (PRD R12), with location
 // and device data removed on the phone before upload (R13).
 
-export const MakeStatus = z.enum(["uploaded", "scanning", "blocked", "held_for_review", "reviewing", "reviewed"]);
+// uploaded → scanning (A5) → blocked | held_for_review | reviewing → reviewed |
+// retake (the coach couldn't see the work) | no_review (it couldn't finish).
+export const MakeStatus = z.enum(["uploaded", "scanning", "blocked", "held_for_review", "reviewing", "reviewed", "retake", "no_review"]);
 export type MakeStatus = z.infer<typeof MakeStatus>;
 
 export const PHOTO = {

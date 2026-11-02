@@ -77,6 +77,7 @@ function Routes() {
         <Stack.Screen name="ai-consent" options={{ presentation: "modal" }} />
         <Stack.Screen name="invite-parent" options={{ presentation: "modal" }} />
         <Stack.Screen name="edit-zones" options={{ presentation: "modal" }} />
+        <Stack.Screen name="review/[makeId]" options={{ presentation: "modal" }} />
       </Stack.Protected>
     </Stack>
   );
