@@ -143,7 +143,8 @@ scenario("18–19s need only their own yes; a saved review comes back to the app
     skillPoints: [...REVIEW.skillPoints].sort((x, y) => x.skill.localeCompare(y.skill)),
   });
   assert.equal(state.state === "ready" && state.reviewId, rid);
-  assert.equal(await count("select count(*) n from zone_progress where zone_id = 'photography' and points = 3"), 1);
+  // 3 skill points + 1 for finishing the quest (A7).
+  assert.equal(await count("select count(*) n from zone_progress where zone_id = 'photography' and points = 4"), 1);
 
   // "Was this helpful?" — own reviews only.
   await q("select rate_review($1, true)", [rid]);
@@ -176,7 +177,7 @@ scenario("the coach sees the quest and craft history, and nothing personal", asy
   assert.ok(c && c.consent);
   const ctx = c.context;
   assert.equal(ctx.zone, "photography");
-  assert.equal(ctx.zonePoints, 6);
+  assert.equal(ctx.zonePoints, 13, "6 skill points + 7 quests finished, this one included (A7)");
   assert.deepEqual(ctx.history, { questsDone: 6, skillPoints: { "photography.light": 6 }, recentTips: ["Tip 6", "Tip 5", "Tip 4", "Tip 3", "Tip 2"] });
   assert.match(ctx.storagePath, new RegExp(`^${A}/`));
   assert.doesNotMatch(JSON.stringify(ctx), /AmberLark|Vancouver|CA|18_19/, "no handle, place or age");

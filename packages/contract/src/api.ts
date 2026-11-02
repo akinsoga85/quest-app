@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { ReviewState } from "./review";
 import { Cheer } from "./family";
+import { NewPostcard, StudioPage, ZoneLevel } from "./levels";
 import { MakeStatus } from "./photo";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
@@ -87,6 +88,44 @@ export const Api = {
     // "Was this helpful?" on the review screen (H16).
     input: z.object({ reviewId: z.uuid(), helpful: z.boolean() }),
     output: z.object({ ok: z.literal(true) }),
+  },
+  "levels.get": {
+    owner: "A7",
+    rpc: "get_levels",
+    input: z.object({}),
+    output: z.array(ZoneLevel),
+  },
+  "studio.list": {
+    owner: "A7",
+    rpc: "get_studio",
+    input: z.object({ zone: z.string().nullable(), before: z.string().nullable(), limit: z.number().int().min(1).max(60) }),
+    output: StudioPage,
+  },
+  "postcards.new": {
+    owner: "A7",
+    rpc: "get_new_postcards",
+    input: z.object({}),
+    output: z.array(NewPostcard),
+  },
+  "postcards.seen": {
+    owner: "A7",
+    rpc: "mark_postcards_seen",
+    input: z.object({ ids: z.array(z.uuid()) }),
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "postcards.pick": {
+    owner: "A7",
+    rpc: "pick_postcard",
+    // Which of the teen's own finished makes in that zone goes on the postcard.
+    input: z.object({ postcardId: z.uuid(), makeId: z.uuid() }),
+    output: z.object({ ok: z.literal(true) }),
+  },
+  "make.delete": {
+    owner: "A7",
+    rpc: "delete_make",
+    // Returns the photo's path; the app then removes it from storage.
+    input: z.object({ makeId: z.uuid() }),
+    output: z.string(),
   },
   "family.share": {
     owner: "A8",

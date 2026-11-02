@@ -350,6 +350,7 @@ export type Database = {
           level: number
           make_id: string | null
           created_at: string
+          seen_at: string | null
         }
         Insert: {
           id?: string
@@ -358,6 +359,7 @@ export type Database = {
           level: number
           make_id?: string | null
           created_at?: string
+          seen_at?: string | null
         }
         Update: {
           id?: string
@@ -366,6 +368,7 @@ export type Database = {
           level?: number
           make_id?: string | null
           created_at?: string
+          seen_at?: string | null
         }
         Relationships: [
           {
@@ -896,13 +899,37 @@ export type Database = {
         Args: { p_age_bracket: Database["public"]["Enums"]["age_bracket"]; p_age_source: Database["public"]["Enums"]["age_source"]; p_country: string; p_region: string; p_timezone: string }
         Returns: { handle: string; mode: Database["public"]["Enums"]["app_mode"]; needs_parent: boolean }[]
       }
+      delete_make: {
+        Args: { p_make_id: string }
+        Returns: string
+      }
+      get_levels: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_new_postcards: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_review: {
         Args: { p_make_id: string }
+        Returns: Json
+      }
+      get_studio: {
+        Args: { p_zone?: string; p_before?: string; p_limit?: number }
         Returns: Json
       }
       get_today: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      mark_postcards_seen: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
+      pick_postcard: {
+        Args: { p_postcard_id: string; p_make_id: string }
+        Returns: undefined
       }
       rate_review: {
         Args: { p_review_id: string; p_helpful: boolean }

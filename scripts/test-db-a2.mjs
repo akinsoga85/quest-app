@@ -359,7 +359,7 @@ scenario("zones: swap in one step, keep progress, at most three", async () => {
   await q("select set_teen_zones($1)", [["photography", "fashion"]]);
   await asAdmin();
   const t = await todayAt(T, new Date());
-  assert.equal(t.zones.find((z) => z.zone === "fashion")?.points, 2);
+  assert.equal(t.zones.find((z) => z.zone === "fashion")?.points, 3, "2 skill points + 1 quest finished (A7)");
 
   await as(P);
   await rejects("select set_teen_zones($1)", [["photography"]], /only teens/);

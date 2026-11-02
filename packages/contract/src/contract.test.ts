@@ -18,6 +18,7 @@ import {
   skillIdsFor,
   CoachClaim,
   SAFETY_THRESHOLDS,
+  skillScore,
   decideScan,
   LESSONS,
   Lesson,
@@ -495,5 +496,25 @@ describe("A6: quest week rules", () => {
     expect(risky("Light a candle in a dark room and photograph the flame up close.").join("|")).toMatch(/unsafe/);
     expect(risky("Ask a stranger at the bus stop if you can photograph their bag.").join("|")).toMatch(/unsafe/);
     expect(risky("Photograph a shadow on your bedroom wall in the morning light.")).toEqual([]);
+  });
+});
+
+describe("A7: points, skill scores and postcards", () => {
+  it("scores a skill 1–10 from its last 10 coach scores", () => {
+    expect(skillScore([])).toBeNull();
+    expect(skillScore([2])).toBe(10);
+    expect(skillScore([0, 0])).toBe(1);
+    expect(skillScore([1])).toBe(6);
+    expect(skillScore([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0])).toBe(10); // only the newest 10 count
+  });
+
+  it("validates what the Levels and Studio screens read", () => {
+    const zone = Api["levels.get"].output.parse([
+      { zone: "photography", points: 30, skills: { "photography.light": 7, "photography.story": null }, compare: null },
+    ]);
+    expect(levelFor(zone[0]!.points).name).toBe("Maker");
+    expect(() => Api["levels.get"].output.parse([{ zone: "photography", points: 3, skills: { x: 11 }, compare: null }])).toThrow();
+    expect(Api["postcards.new"].output.parse([{ id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", zone: "photography", level: 2, makeId: null }])).toHaveLength(1);
+    expect(() => Api["postcards.new"].output.parse([{ id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11", zone: "photography", level: 1, makeId: null }])).toThrow();
   });
 });

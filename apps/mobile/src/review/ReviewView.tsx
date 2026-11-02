@@ -23,6 +23,7 @@ interface Props {
   onTurnOnCoach: () => void;
   onDone: () => void;
   onRetry: () => void;
+  onDelete?: () => void; // the teen can delete any piece (PRD R36)
 }
 
 // H16 (Studio) / H7: the coach's review, and what's shown while it's coming
@@ -55,6 +56,13 @@ export function ReviewView(p: Props) {
       ) : null}
       <Body {...p} />
       <ErrorText message={p.error} />
+      {p.onDelete && p.state && p.state.state !== "pending" && p.state.state !== "held" ? (
+        <Pressable accessibilityRole="button" onPress={p.onDelete} style={[styles.delete, { minHeight: minTouch(Platform.OS) }]}>
+          <Text variant="label" color="danger">
+            Delete this make
+          </Text>
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -260,5 +268,6 @@ const styles = StyleSheet.create({
   lesson: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: space.sm, gap: space.xxs },
   pill: { borderRadius: radius.pill, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface2 },
   pillOn: { backgroundColor: colors.lime },
+  delete: { alignSelf: "center", justifyContent: "center", paddingHorizontal: space.md },
   helpline: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: space.sm, gap: 2, justifyContent: "center" },
 });
