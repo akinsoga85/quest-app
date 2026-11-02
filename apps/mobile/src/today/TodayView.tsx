@@ -1,13 +1,30 @@
 import type { Today } from "@quest/contract";
+import type { PendingMake } from "../capture/queue";
+import { pendingLabel } from "../capture/queue";
 import { Text } from "../ui/Text";
 import { Screen } from "../ui/Screen";
 import { dayHeading, splitZones, weekRow } from "./logic";
-import { AllDoneCard, QuestCard, QuestRow, StreakPill, StudioNote, WeekRow } from "./parts";
+import { AllDoneCard, QuestCard, QuestRow, StreakPill, StudioNote, WeekRow, type RowSaving } from "./parts";
+
+interface Props {
+  today: Today;
+  studio: boolean;
+  error?: string | null;
+  saving?: PendingMake[]; // photos on their way to the server (A3)
+  onOpen: (questId: string) => void;
+  onRetry?: () => void;
+  onDiscard?: (makeId: string) => void;
+}
 
 // H15 (Studio) / H5, drawn from a Today payload.
-export function TodayView({ today, studio, error, onOpen }: { today: Today; studio: boolean; error?: string | null; onOpen: (questId: string) => void }) {
-  const { main, rest } = splitZones(today.zones);
-  const allDone = today.zones.length > 0 && today.zones.every((z) => z.madeToday);
+export function TodayView({ today, studio, error, saving = [], onOpen, onRetry = () => undefined, onDiscard = () => undefined }: Props) {
+  const savingIds = new Set(saving.map((p) => p.questId));
+  const { main, rest } = splitZones(today.zones, savingIds);
+  const allDone = today.zones.length > 0 && today.zones.every((z) => z.madeToday || (z.quest && savingIds.has(z.quest.id)));
+  const rowSaving = (questId: string | undefined): RowSaving | undefined => {
+    const p = saving.find((s) => s.questId === questId);
+    return p ? { label: pendingLabel(p), failed: p.stage === "failed", onRetry, onDiscard: () => onDiscard(p.makeId) } : undefined;
+  };
   return (
     <Screen title="Today" dateline={dayHeading(today.day)} aside={<StreakPill weeks={today.streakWeeks} />}>
       <WeekRow dots={weekRow(today)} streakWeeks={today.streakWeeks} />
@@ -20,7 +37,7 @@ export function TodayView({ today, studio, error, onOpen }: { today: Today; stud
       {main?.quest ? <QuestCard zone={main} quest={main.quest} onStart={() => onOpen(main.quest!.id)} /> : null}
       {!main && allDone ? <AllDoneCard /> : null}
       {rest.map((z) => (
-        <QuestRow key={z.zone} zone={z} onOpen={(q) => onOpen(q.id)} />
+        <QuestRow key={z.zone} zone={z} onOpen={(q) => onOpen(q.id)} saving={z.madeToday ? undefined : rowSaving(z.quest?.id)} />
       ))}
     </Screen>
   );

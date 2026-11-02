@@ -2,6 +2,7 @@ import { colors, minTouch, radius, space } from "@quest/tokens";
 import { router, type Tabs } from "expo-router";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUploads } from "../capture/UploadProvider";
 import { firstOpenQuest } from "../today/logic";
 import { useToday } from "../today/TodayProvider";
 import { HomeIcon, LevelsIcon, PlusIcon, StudioIcon, YouIcon } from "./icons";
@@ -21,7 +22,8 @@ export function TabBar({ state, descriptors, emitter, navigateToTab }: TabBarPro
   const insets = useSafeAreaInsets();
   const target = minTouch(Platform.OS);
   const { today } = useToday();
-  const next = firstOpenQuest(today);
+  const { pending } = useUploads();
+  const next = firstOpenQuest(today, new Set(pending.map((p) => p.questId)));
 
   const tabs = state.routes.map((route, index) => {
     const focused = state.index === index;

@@ -25,7 +25,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 |---|---|---|---|---|
 | A1 | Sign-up, age and consent | `bracketForAge`, `bracketFromAgeRange`, `ageFromBirthMonth`, `modeFor`, `needsParentConsent`; `teen.create`, `signup.abandon`, `parent.invite`, `parent.accept`, `ai.consent` (Postgres functions); `private.coach_allowed`; tables `teens`, `parents`, `parent_links`, `app_config` | H1, H2, H3, H14a, H22 | **Built.** Ages 12–19 in Canada and the US tested; under-13s stopped and nothing kept; links expire after 7 days. Store age signal (expo-age-range) still to check on real phones |
 | A2 | Quests and Today | `Quest`, `Today`, `localDay`, `weekStart`, `weekDays`, `weeklyStreak`, `MAKING_DAYS_PER_WEEK`; `zones.set`, `today.get` (Postgres functions); `makes.local_day`; tables `quests`, `quest_schedule`, `teen_zones` | H4, H5, H15 | **Built.** Quests appear at local midnight in 13 time zones, including daylight-saving days; the weekly streak matches the contract across time zones and travel |
-| A3 | Capture and upload | `make.createUpload`; table `makes`; storage bucket `makes` | H6, H23 | No upload keeps location data; uploads resume after a dropped connection; system photo picker on Android |
+| A3 | Capture and upload | `PHOTO`, `cropTo45`, `jpegMetadata`, `stripJpegMetadata`, `makePath`, `MakeStatus`; `make.record` (Postgres function); table `makes`; storage bucket `makes` | H6, H23 | **Built.** Photos lose location and device data on the phone (tested on real GPS JPEGs); the upload queue resumes after dropped connections and restarts; Android uses the system photo picker with broad photo permissions blocked |
 | A4 | Coach agent | `CoachReview`, `coachReviewJsonSchema`, `reviewGuardrailIssues`, `MIN_REVIEW_CONFIDENCE`; `review.forMake`; tables `reviews`, `skill_points` | H7, H16 | Passes the coach test set (Lean V1 tab: "How we know it's good"); no review without `ai_coach_consent` |
 | A5 | Safety scan | `make.submit`; table `safety_scans` | H8 (safety card) | Test hashes always blocked; flagged items reach the admin queue; nothing reaches the coach unscanned |
 | A6 | Quest writer agent | `QuestWeekDraft`, `questRuleProblems`; drafts into `quests` | — | Drafts a week per zone with zero rule problems; approved in admin |
@@ -47,10 +47,16 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
   Zone picking is the last onboarding step and can be changed from the You tab.
 - **For A3, A4 and A5:** check `private.coach_allowed(teen_id)` before anything
   leaves the phone: it needs the teen's yes, plus an active parent link for under-18s.
-- **For A3:** a make's `local_day` is set by a trigger from the teen's time zone and
-  `created_at`. The app can't set either; a server function may pass a capture time
-  for photos taken offline (never in the future). Makes count for the streak unless
-  `blocked`.
+- **A3 capture and upload:** built on branch `a3-capture` (on top of `a2-today`).
+  The phone uploads the cleaned photo to `makes/<teen>/<make>.jpg`, then calls
+  `record_make`, which checks the quest was open on the day the photo was taken
+  (up to 48 hours earlier, for photos taken offline). The app can't insert makes
+  directly. Left: try the camera and picker on real phones.
+- **For A5:** new makes arrive as `status = 'uploaded'`. Start the scan from there
+  (a database webhook on `makes` insert, or `make.submit`), and run `jpegMetadata`
+  on the stored bytes before anything else; refuse a photo that still has metadata.
+- **For A12:** Expo's template adds `SYSTEM_ALERT_WINDOW` (used by the dev menu);
+  consider blocking it in release builds.
 - **For A6 and A11:** a scheduled quest stays hidden until the teen's local midnight on
   its day, so schedule weeks ahead freely. A day with no quest shows "on its way" for
   that zone.

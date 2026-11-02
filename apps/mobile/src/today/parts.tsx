@@ -3,7 +3,7 @@ import { colors, minTouch, radius, space, zoneColors } from "@quest/tokens";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Rect } from "react-native-svg";
 import { Button } from "../ui/Button";
-import { ArrowRightIcon, CheckIcon, FlameIcon, LockIcon } from "../ui/icons";
+import { AlertIcon, ArrowRightIcon, CheckIcon, ClockIcon, FlameIcon, LockIcon } from "../ui/icons";
 import { Text } from "../ui/Text";
 import {
   questMeta,
@@ -103,14 +103,35 @@ export function QuestCard({ zone, quest, onStart }: { zone: TodayZone; quest: To
   );
 }
 
-// A smaller row for the other zones: to do, done today, or not ready yet.
-export function QuestRow({ zone, onOpen }: { zone: TodayZone; onOpen: (quest: TodayQuest) => void }) {
+export interface RowSaving {
+  label: string; // "Saving your photo…", or why it couldn't be saved
+  failed: boolean;
+  onRetry: () => void;
+  onDiscard: () => void;
+}
+
+// A smaller row for the other zones: to do, saving, done today, or not ready yet.
+export function QuestRow({ zone, onOpen, saving }: { zone: TodayZone; onOpen: (quest: TodayQuest) => void; saving?: RowSaving }) {
   const { quest } = zone;
   const name = ZONES[zone.zone].name;
-  const open = quest !== null && !zone.madeToday;
+  const open = quest !== null && !zone.madeToday && !saving;
   const title = quest ? quest.title : `Today's ${name} quest is on its way`;
-  const status = zone.madeToday ? "Done today" : quest ? `About ${quest.minutes} minutes` : "Check back soon";
+  const status = zone.madeToday ? "Done today" : saving ? saving.label : quest ? `About ${quest.minutes} minutes` : "Check back soon";
   const target = minTouch(Platform.OS);
+
+  const badge = zone.madeToday ? (
+    <View style={[styles.round, styles.roundDone, { width: target, height: target }]}>
+      <CheckIcon color={colors.limeInk} size={20} strokeWidth={3} />
+    </View>
+  ) : saving ? (
+    <View style={[styles.round, { width: target, height: target }]}>
+      {saving.failed ? <AlertIcon color={colors.danger} size={20} /> : <ClockIcon color={colors.lime} size={20} />}
+    </View>
+  ) : quest ? (
+    <View style={[styles.round, { width: target, height: target }]}>
+      <ArrowRightIcon color={colors.text} size={20} />
+    </View>
+  ) : null;
 
   const content = (
     <>
@@ -121,19 +142,32 @@ export function QuestRow({ zone, onOpen }: { zone: TodayZone; onOpen: (quest: To
         </Text>
         <Text variant="subheading">{title}</Text>
         {!open ? (
-          <Text variant="caption" color="muted">
+          <Text variant="caption" color={saving?.failed ? "danger" : "muted"} accessibilityLiveRegion="polite">
             {status}
           </Text>
         ) : null}
       </View>
-      {quest ? (
-        <View style={[styles.round, { width: target, height: target }, zone.madeToday ? styles.roundDone : null]}>
-          {zone.madeToday ? <CheckIcon color={colors.limeInk} size={20} strokeWidth={3} /> : <ArrowRightIcon color={colors.text} size={20} />}
-        </View>
-      ) : null}
+      {badge}
     </>
   );
 
+  if (saving?.failed) {
+    return (
+      <View style={[styles.row, { flexDirection: "column", alignItems: "stretch" }]}>
+        <View style={styles.rowInner} accessible accessibilityLabel={`${name}: ${title}. ${status}`}>
+          {content}
+        </View>
+        <View style={{ flexDirection: "row", gap: space.xs }}>
+          <View style={{ flex: 1 }}>
+            <Button label="Try again" variant="secondary" onPress={saving.onRetry} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button label="Discard photo" variant="secondary" onPress={saving.onDiscard} />
+          </View>
+        </View>
+      </View>
+    );
+  }
   if (!open || !quest) {
     return (
       <View style={styles.row} accessible accessibilityLabel={`${name}: ${title}. ${status}.`}>
@@ -197,6 +231,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: 14,
   },
+  rowInner: { flexDirection: "row", alignItems: "center", gap: space.sm },
   round: { borderRadius: radius.pill, backgroundColor: colors.surface2, alignItems: "center", justifyContent: "center" },
   roundDone: { backgroundColor: colors.lime },
 });

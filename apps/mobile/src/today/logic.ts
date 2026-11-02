@@ -71,14 +71,15 @@ export function weekAccessibilityLabel(dots: WeekDot[]): string {
   return `This week you made something on ${made.length} ${made.length === 1 ? "day" : "days"}: ${made.join(", ")}.`;
 }
 
-// The big card goes to the first zone with a quest still to do; the rest are rows.
-export function splitZones(zones: TodayZone[]): { main: TodayZone | null; rest: TodayZone[] } {
-  const main = zones.find((z) => z.quest !== null && !z.madeToday) ?? null;
+// The big card goes to the first zone with a quest still to do; the rest are
+// rows. `saving` holds quest ids with a photo on its way (A3), which count as done.
+export function splitZones(zones: TodayZone[], saving: ReadonlySet<string> = new Set()): { main: TodayZone | null; rest: TodayZone[] } {
+  const main = zones.find((z) => z.quest !== null && !z.madeToday && !saving.has(z.quest.id)) ?? null;
   return { main, rest: zones.filter((z) => z !== main) };
 }
 
-export function firstOpenQuest(today: Today | null): TodayQuest | null {
-  return today ? splitZones(today.zones).main?.quest ?? null : null;
+export function firstOpenQuest(today: Today | null, saving: ReadonlySet<string> = new Set()): TodayQuest | null {
+  return today ? splitZones(today.zones, saving).main?.quest ?? null : null;
 }
 
 export function findQuest(today: Today | null, questId: string | undefined): TodayQuest | null {

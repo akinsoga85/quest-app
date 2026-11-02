@@ -386,8 +386,10 @@ scenario("time zones: only real ones, and the app can't backdate a make", async 
     [T, quest],
     /permission denied/,
   );
-  const r = await one("insert into makes (teen_id, quest_id, storage_path) values ($1::uuid, $2, $1::text || '/y.jpg') returning local_day::text", [T, quest]);
-  assert.equal(r.local_day, localDay(new Date((await one("select now() as n")).n), "Europe/Paris"));
+  // Made through record_make (A3), a make's day comes from the teen's time zone.
+  const todays = (await one("select quest_id from quest_schedule where day = private.today_for($1) and zone_id = 'photography'", [T])).quest_id;
+  const r = (await one("select record_make(gen_random_uuid(), $1, now()) as r", [todays])).r;
+  assert.equal(r.localDay, localDay(new Date((await one("select now() as n")).n), "Europe/Paris"));
 
   await asAdmin();
   await rejects(

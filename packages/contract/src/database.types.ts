@@ -741,6 +741,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      record_make: {
+        Args: { p_make_id: string; p_quest_id: string; p_captured_at: string }
+        Returns: Json
+      }
       set_ai_coach_consent: {
         Args: { p_allow: boolean; p_teen_id?: string }
         Returns: undefined

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgeBracket, AgeSource, AppMode } from "./age";
 import { CoachReview } from "./review";
 import { Cheer } from "./family";
+import { MakeStatus } from "./photo";
 import { Today } from "./today";
 import { MAX_ZONES_PER_TEEN, ZoneId } from "./zones";
 
@@ -62,10 +63,15 @@ export const Api = {
     input: z.object({}),
     output: Today,
   },
-  "make.createUpload": {
+  "make.record": {
     owner: "A3",
-    input: z.object({ questId: z.uuid() }),
-    output: z.object({ makeId: z.uuid(), path: z.string(), uploadUrl: z.url() }),
+    rpc: "record_make",
+    // Called after the photo is in storage at makePath(teenId, makeId). The app
+    // makes the id when the photo is taken, so a retry after a dropped
+    // connection never makes a second make. capturedAt lets a photo taken
+    // offline count for the day it was taken (within MAKE_UPLOAD_WINDOW_HOURS).
+    input: z.object({ makeId: z.uuid(), questId: z.uuid(), capturedAt: z.iso.datetime({ offset: true }) }),
+    output: z.object({ makeId: z.uuid(), status: MakeStatus, localDay: z.iso.date() }),
   },
   "make.submit": {
     owner: "A5",

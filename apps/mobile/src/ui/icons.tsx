@@ -117,3 +117,40 @@ export const ZONE_ICONS = {
   music: MusicIcon,
   words: PenIcon,
 } as const;
+
+export const CloseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Path d="M18 6 6 18M6 6l12 12" />
+  </Icon>
+);
+
+export const AlertIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Circle cx={12} cy={12} r={10} />
+    <Path d="M12 8v4M12 16h.01" />
+  </Icon>
+);
+
+export const ImageIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+    <Circle cx={9} cy={9} r={2} />
+    <Path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+  </Icon>
+);
+
+export const FlipIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+    <Path d="M21 3v5h-5" />
+    <Path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+    <Path d="M8 16H3v5" />
+  </Icon>
+);
+
+export const ClockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <Circle cx={12} cy={12} r={10} />
+    <Path d="M12 6v6l4 2" />
+  </Icon>
+);

@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AccountProvider, useAccount } from "../src/lib/account";
+import { UploadProvider } from "../src/capture/UploadProvider";
 import { TodayProvider } from "../src/today/TodayProvider";
 
 void SplashScreen.preventAutoHideAsync();
@@ -32,7 +33,9 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <AccountProvider>
         <TodayProvider>
-          <Routes />
+          <UploadProvider>
+            <Routes />
+          </UploadProvider>
         </TodayProvider>
       </AccountProvider>
     </SafeAreaProvider>
