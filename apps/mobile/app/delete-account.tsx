@@ -91,7 +91,7 @@ export default function DeleteAccount() {
         ]}
       />
       <Text variant="caption" color="muted">
-        Plus from the App Store or Google Play renews until you cancel it in your phone's subscriptions. If a parent pays for Plus, they can cancel it on their parent page.
+        Plus from the App Store or Google Play renews until you cancel it in your phone's subscriptions. Any other Plus stops when your account is deleted.
       </Text>
     </Screen>
   );

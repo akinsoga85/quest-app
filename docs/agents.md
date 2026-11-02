@@ -34,7 +34,7 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
 | A9 | Plus and payments | `PLUS`, `canBuyInApp`, `EntitlementEvent`, `fromRevenueCat`, `fromStripe`, `PlusStatus`; `plus.status`, `parent.plus` (Postgres functions); `plus.checkout`, `plus.portal` (edge function `payments`); tables `entitlements`, `entitlement_events`, `billing_customers`; `packages/payments` | H25 | **Built.** Buy, renew, cancel and refund tested for App Store, Google Play and the web, each event applied once; under-18s buy only through a linked parent. Left: Stripe and RevenueCat accounts, sandbox runs, and the in-app purchase screen for 18–19s |
 | A10 | Evening drop and notifications | `NotificationPrefs`, `inQuietHours`, `dropDue`, `dropMessage`, `Drop`; `drop.get`, `notifications.prefs`, `push.register` (Postgres functions); tables `notification_prefs`, `push_tokens`, `drops`; `packages/notify` | H11, H19 | **Built.** Tested with the real job and a fake clock: the drop arrives at 8 pm local in Tokyo, Kathmandu and Los Angeles, once each, and never in quiet hours. Left: an EAS project id, and pushes on real phones |
 | A11 | Admin and operations | `account.export`, `account.delete`, `account.cancelDelete`, `account.deletion`, `admin.*`, `DELETION_DAYS`, `withPhotoLinks`; tables `deletion_requests`, `staff`, `review_grades`; `apps/admin`, `packages/ops` | H20a, H21 | **Built.** Quest approval, the safety queue, the 1% coach spot check, deletion (7 days to change your mind, held for safety reports) and export all tested against the database, and the real deletion job run against it. Left: host the admin site, add staff, and write the safeguarding policy `docs/operations.md` points to |
-| A12 | Store release | `apps/mobile/app.json` | — | Listings, privacy labels and age ratings done; internal testing on both stores |
+| A12 | Store release | `apps/mobile/app.json`, `apps/mobile/eas.json`, `docs/store-release.md` | — | **Built** as far as code goes: release settings locked by tests (privacy manifest, blocked permissions, icons, build numbering), listing, privacy labels, age-rating answers and the internal testing steps written. Left (needs your accounts): IDs, `eas init`, final icon, the first uploads, and the Plus-on-iOS decision |
 
 ## Status
 
@@ -70,8 +70,8 @@ and the schema in `supabase/migrations`, so each one runs and is tested on its o
   Settings with download and delete in the app, `/delete` on the parent site, the
   admin site (`apps/admin`), and the daily deletion job (`packages/ops`). How staff
   use it: `docs/operations.md`.
-- **For A12:** Expo's template adds `SYSTEM_ALERT_WINDOW` (used by the dev menu);
-  consider blocking it in release builds.
+- **A12 store release:** built on branch `a12-release` (on top of `a11-admin`).
+  `SYSTEM_ALERT_WINDOW` and the advertising ID are blocked; see `docs/store-release.md`.
 - **For A6 and A11:** a scheduled quest stays hidden until the teen's local midnight on
   its day, so schedule weeks ahead freely. A day with no quest shows "on its way" for
   that zone.
