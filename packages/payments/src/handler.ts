@@ -11,6 +11,7 @@ export interface Parent {
   email: string | null;
   teenIds: string[]; // actively linked teens
   includedTeenIds: string[]; // of those, the 13–15s, who get Plus free
+  webPlusTeenIds: string[]; // of those, the ones this parent already pays for here
 }
 
 export interface PaymentsDeps {
@@ -74,8 +75,10 @@ async function checkout(req: Request, env: Record<string, string | undefined>, d
   if (parent.includedTeenIds.includes(body.teenId)) return new Response("Plus is included free for 13–15s", { status: 409 });
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_PRICE_PLUS || !env.PARENT_SITE_URL) return new Response("payments aren't set up", { status: 503 });
   const site = env.PARENT_SITE_URL.replace(/\/+$/, "");
+  // Each teen after the first that this parent pays for is cheaper (PLUS.extraTeenUsd).
+  const extraTeen = !!env.STRIPE_PRICE_PLUS_EXTRA && parent.webPlusTeenIds.some((id) => id !== body.teenId);
   const { url } = await createCheckout(deps.fetch, env.STRIPE_SECRET_KEY, {
-    priceId: env.STRIPE_PRICE_PLUS,
+    priceId: extraTeen ? env.STRIPE_PRICE_PLUS_EXTRA! : env.STRIPE_PRICE_PLUS,
     teenId: body.teenId,
     parentId: parent.id,
     parentEmail: parent.email,
@@ -92,5 +95,5 @@ async function portal(req: Request, env: Record<string, string | undefined>, dep
   const customer = await deps.customerFor(parent.id);
   if (!customer) return new Response("no Plus to manage yet", { status: 404 });
   if (!env.STRIPE_SECRET_KEY || !env.PARENT_SITE_URL) return new Response("payments aren't set up", { status: 503 });
-  return json(await createPortal(deps.fetch, env.STRIPE_SECRET_KEY, customer, env.PARENT_SITE_URL));
+  return json(await createPortal(deps.fetch, env.STRIPE_SECRET_KEY, customer, env.PARENT_SITE_URL, env.STRIPE_PORTAL_CONFIGURATION || undefined));
 }

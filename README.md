@@ -27,6 +27,7 @@ The plan, PRD and design review live in the product doc; screens are in Figma
 | `docs/agents.md` | Rules and briefs for the AI agents building packages A1–A12 |
 | `docs/operations.md` | How staff run things: the safety queue, quest weeks, the coach spot check, deletions |
 | `docs/production-setup.md` | Setting up the production Supabase project |
+| `docs/payments-setup.md` | Setting up Stripe, RevenueCat and the store subscriptions |
 | `docs/store-release.md` | Store release (A12): accounts, internal testing, listing, privacy labels, age ratings, release checklist |
 
 ## Run it
@@ -110,20 +111,11 @@ account. Every purchase, renewal,
 cancellation and refund arrives as a webhook at the `payments` function and is
 applied once.
 
-What you need to set up (needs your accounts):
-
-1. **Stripe**: a product with a monthly price (`STRIPE_PRICE_PLUS`), the
-   customer portal turned on, and a webhook to `…/functions/v1/payments/webhook`
-   for `checkout.session.completed` and `customer.subscription.*`
-   (`STRIPE_WEBHOOK_SECRET`). For a refund, cancel the subscription
-   immediately with a refund, so Plus ends at once.
-2. **RevenueCat**: the app's App Store and Google Play subscriptions, and a
-   webhook to the same URL with an authorization header
-   (`REVENUECAT_WEBHOOK_SECRET`). The app logs in to RevenueCat with the teen's
-   id. Store products, the `plus` entitlement and the app's SDK keys:
-   `docs/store-release.md`, section 8.
-3. `npm run build:functions`, `supabase functions deploy payments --no-verify-jwt`,
-   and the secrets listed in `supabase/functions/payments/index.ts`.
+Setting up Stripe and RevenueCat (needs your accounts): `docs/payments-setup.md`.
+`npm run setup:stripe` creates the product, both prices, the manage page
+settings and the webhook. A second teen on the same parent account pays the
+extra-teen price. For a refund on the web, cancel the subscription immediately
+with a refund, so Plus ends at once.
 
 ## The parent page (A8)
 

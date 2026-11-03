@@ -32,6 +32,7 @@ export function paymentsDepsFromEnv(env: Record<string, string | undefined>): Pa
         email: user.user.email ?? null,
         teenIds: overview.success ? overview.data.teens.map((t) => t.teenId) : [],
         includedTeenIds: plus.success ? plus.data.filter((p) => p.included).map((p) => p.teenId) : [],
+        webPlusTeenIds: plus.success ? plus.data.filter((p) => p.active && !p.included && p.source === "web").map((p) => p.teenId) : [],
       };
     },
     fetch: (u, init) => fetch(u, init),

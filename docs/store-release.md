@@ -186,22 +186,6 @@ what they entered (A1).
 
 ## 8. Selling Plus in the app (needs your accounts)
 
-1. **App Store Connect:** a subscription group "Plus" with one auto-renewing
-   monthly subscription (for example `quest_plus_monthly`), its price, a
-   display name and description, and a review screenshot of the Plus screen.
-   Submit it together with the app version: the first subscription must be
-   reviewed with a build.
-2. **Google Play Console:** a subscription with a monthly base plan, its
-   price, and the same name. Play needs an uploaded build before you can add it.
-3. **RevenueCat:** add both apps and their store credentials, an entitlement
-   with the identifier `plus`, both products attached to it, and a `default`
-   offering with a monthly package. Put the public SDK keys in the EAS
-   environment variables `EXPO_PUBLIC_REVENUECAT_IOS_KEY` and
-   `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`, and point RevenueCat's webhook at
-   `…/functions/v1/payments/webhook` (README, Plus and payments).
-4. **Terms and privacy links:** set `EXPO_PUBLIC_TERMS_URL` and
-   `EXPO_PUBLIC_PRIVACY_URL` (they default to `/terms` and `/privacy` on the
-   parent site, which don't exist yet).
-5. **Test** with an App Store sandbox tester and a Play license tester: buy,
-   cancel, restore on a second phone, and a 16–17 account before a parent
-   links, after linking, and after the parent says yes. Plus should show in Settings within seconds of buying.
+The store subscriptions, RevenueCat, and the sandbox tests are in
+`docs/payments-setup.md`. Store products must exist (and the first
+subscription goes to review with a build) before Plus can be bought in the app.

@@ -108,8 +108,8 @@ select id, email, 'admin' from auth.users where email = '<your work email>';
   `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`docs/store-release.md`).
 - **Parent site and admin site**: `VITE_SUPABASE_URL` and
   `VITE_SUPABASE_ANON_KEY` in each `.env` before building.
-- **Stripe and RevenueCat webhooks** point to
-  `https://<project id>.supabase.co/functions/v1/payments/webhook` (README, Plus and payments).
+- **Stripe and RevenueCat:** `docs/payments-setup.md`. Both send their
+  webhooks to `https://<project id>.supabase.co/functions/v1/payments/webhook`.
 
 ## 6. Before launch
 
