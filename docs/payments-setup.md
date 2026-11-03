@@ -38,8 +38,29 @@ end against a staging project, then switch to live.
   `STRIPE_AUTOMATIC_TAX=off` in the function's secrets turns it off.
   Plus bought in the app needs none of this: Apple and Google collect and
   pay the tax themselves.
-- **Currency:** prices are in US dollars. Canadian parents pay in USD unless
-  you turn on Adaptive Pricing in Stripe, which shows local prices.
+- **Currency, and Adaptive Pricing for Canadian parents:** prices are set in
+  US dollars. Adaptive Pricing shows parents outside the US the price in their
+  own currency at checkout, so Canadians see Canadian dollars. Nothing in the
+  code changes; it's set in Stripe:
+  1. **Ask Stripe for access.** For subscriptions, Adaptive Pricing is a beta
+     that Stripe turns on per account. Ask your Stripe account team, or the
+     Adaptive Pricing beta contact on Stripe's support page.
+  2. **Turn it on.** Once you have access, go to Settings → Payments →
+     Adaptive Pricing, in test mode first and then live. It applies to new
+     subscriptions from that point; existing ones stay in US dollars.
+
+  What parents see and pay:
+  - The Canadian-dollar price follows the exchange rate at each monthly
+    renewal, so it can change a little from month to month.
+  - Stripe adds a currency conversion fee to the parent's price.
+  - Your payouts, Stripe Tax reports and the prices in this repo stay in US
+    dollars.
+  - The parent page still shows $7.99 (US) until checkout.
+
+  If you'd rather have a fixed Canadian price, such as CA$10.99 every month
+  with no conversion fee, that works without the beta: the prices get a
+  Canadian-dollar amount alongside the US one. Ask, and it's a small change
+  to `npm run setup:stripe`.
 
 ### 2. Run the setup (your computer)
 
@@ -79,6 +100,8 @@ card `4242 4242 4242 4242` (any future date, any CVC). Then check:
   the month.
 - A refund (in Stripe, cancel the subscription immediately with a refund)
   stops Plus at once.
+- With Adaptive Pricing on: a checkout from a Canadian address (or Stripe's
+  test location tools) shows Canadian dollars.
 - A 13–15 is never offered Plus to buy.
 
 ## RevenueCat (the app)
