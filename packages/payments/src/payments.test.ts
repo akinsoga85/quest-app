@@ -141,6 +141,21 @@ describe("checkout and the manage page", () => {
     expect(new URLSearchParams(d.calls[0]!.body).get("configuration")).toBe("bpc_1");
   });
 
+  it("works out tax with Stripe Tax, and saves a returning parent's address for it", async () => {
+    const form = async (over: Partial<PaymentsDeps>, e: Record<string, string> = env) => {
+      const d = deps(over);
+      await handlePayments(post("/checkout", JSON.stringify({ teenId: TEEN }), { authorization: "Bearer parent-jwt" }), e, d);
+      return Object.fromEntries(new URLSearchParams(d.calls[0]!.body));
+    };
+    const first = await form({});
+    expect(first["automatic_tax[enabled]"]).toBe("true");
+    expect(first["customer_update[address]"]).toBeUndefined(); // a new customer: Checkout saves the address itself
+    const returning = await form({ customerFor: async () => "cus_123" });
+    expect([returning["automatic_tax[enabled]"], returning["customer_update[address]"]]).toEqual(["true", "auto"]);
+    const off = await form({ customerFor: async () => "cus_123" }, { ...env, STRIPE_AUTOMATIC_TAX: "off" });
+    expect([off["automatic_tax[enabled]"], off["customer_update[address]"]]).toEqual([undefined, undefined]);
+  });
+
   it("says when payments aren't set up", async () => {
     expect((await handlePayments(post("/checkout", JSON.stringify({ teenId: TEEN }), { authorization: "Bearer parent-jwt" }), {}, deps())).status).toBe(503);
   });

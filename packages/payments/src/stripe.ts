@@ -45,10 +45,13 @@ export interface CheckoutParams {
   customerId: string | null; // a returning parent keeps one Stripe customer
   successUrl: string;
   cancelUrl: string;
+  automaticTax: boolean; // Stripe Tax works out sales tax / GST from the parent's address
 }
 
 // A Plus subscription for one teen, paid by their parent. The teen's id rides
 // on the subscription (metadata.teen_id), which the webhook reads back.
+// With automatic tax, Checkout asks for as much of the address as tax needs,
+// saves it on a returning parent's customer, and every renewal keeps it on.
 export function createCheckout(fetch: Fetch, secretKey: string, p: CheckoutParams): Promise<{ url: string }> {
   return stripePost(fetch, secretKey, "checkout/sessions", {
     mode: "subscription",
@@ -62,6 +65,8 @@ export function createCheckout(fetch: Fetch, secretKey: string, p: CheckoutParam
     "metadata[teen_id]": p.teenId,
     "subscription_data[metadata][teen_id]": p.teenId,
     "subscription_data[metadata][parent_id]": p.parentId,
+    "automatic_tax[enabled]": p.automaticTax ? "true" : undefined,
+    "customer_update[address]": p.automaticTax && p.customerId ? "auto" : undefined,
   });
 }
 
