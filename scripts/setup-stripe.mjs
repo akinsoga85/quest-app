@@ -42,6 +42,12 @@ try {
 console.log(`Stripe ${r.live ? "LIVE" : "test"} mode`);
 console.log(r.created.length ? r.created.map((c) => `  created ${c}`).join("\n") : "  everything was already there");
 
+if (r.taxReady !== true) {
+  console.log(`\n${r.taxReady === false ? "Stripe Tax isn't set up yet" : "Couldn't check Stripe Tax"} in ${r.live ? "live" : "test"} mode.`);
+  console.log("Checkout has automatic tax on, and Stripe refuses it until Stripe Tax is set up: Settings → Tax →");
+  console.log("head office address and default product tax code, then registrations where you collect (docs/payments-setup.md).");
+}
+
 const values = {
   STRIPE_SECRET_KEY: key,
   STRIPE_PRICE_PLUS: r.pricePlus,

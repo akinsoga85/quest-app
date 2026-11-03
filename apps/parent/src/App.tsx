@@ -530,7 +530,7 @@ function PlusCard({
             ))}
           </ul>
           <p className="muted small">
-            ${PLUS.monthlyUsd} a month per teen · extra teens ${PLUS.extraTeenUsd} (prices to test). Cancel any time.
+            ${PLUS.monthlyUsd} a month per teen · extra teens ${PLUS.extraTeenUsd}, plus tax where it applies (prices to test). Cancel any time.
           </p>
           <button className="btn primary" disabled={busy} onClick={onStart}>
             Start Plus

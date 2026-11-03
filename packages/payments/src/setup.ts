@@ -7,7 +7,9 @@ import { formEncode, type Fetch } from "./stripe";
 // Safe to run again: it finds what's there by lookup key or metadata and only
 // creates what's missing. Prices come from PLUS in the contract, the same
 // numbers the parent page shows; change them there and run it again (new
-// subscribers get the new price, existing ones keep theirs).
+// subscribers get the new price, existing ones keep theirs). Prices are
+// before tax ("exclusive"): Stripe Tax adds sales tax or GST/HST at checkout
+// where the account is registered to collect it.
 
 export const STRIPE_LOOKUP = { plus: "quest_plus_monthly", extraTeen: "quest_plus_extra_teen_monthly" } as const;
 export const STRIPE_EVENTS = ["checkout.session.completed", "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"] as const;
@@ -27,6 +29,7 @@ export interface StripeSetupResult {
   priceExtraTeen: string;
   portalConfiguration: string;
   webhook: { id: string; secret: string | null; created: boolean };
+  taxReady: boolean | null; // Stripe Tax set up in this mode (null: couldn't tell)
   created: string[]; // what this run made, for the log
 }
 
@@ -62,7 +65,7 @@ export async function setupStripe(fetch: Fetch, secretKey: string, o: StripeSetu
 
   // The two monthly prices, found by lookup key. A changed amount makes a new
   // price that takes over the lookup key.
-  const prices = await call<{ data: (Obj & { lookup_key: string; unit_amount: number; currency: string })[] }>("GET", "prices", {
+  const prices = await call<{ data: (Obj & { lookup_key: string; unit_amount: number; currency: string; tax_behavior?: string })[] }>("GET", "prices", {
     "lookup_keys[0]": STRIPE_LOOKUP.plus,
     "lookup_keys[1]": STRIPE_LOOKUP.extraTeen,
     active: "true",
@@ -71,12 +74,21 @@ export async function setupStripe(fetch: Fetch, secretKey: string, o: StripeSetu
   const price = async (lookupKey: string, usd: number, nickname: string): Promise<string> => {
     const cents = Math.round(usd * 100);
     const existing = prices.data.find((p) => p.lookup_key === lookupKey);
-    if (existing && existing.unit_amount === cents && existing.currency === "usd") return existing.id;
+    if (existing && existing.unit_amount === cents && existing.currency === "usd") {
+      if (existing.tax_behavior === "exclusive") return existing.id;
+      // Stripe lets an unspecified tax behaviour be set once; anything else needs a new price.
+      if (!existing.tax_behavior || existing.tax_behavior === "unspecified") {
+        await call<Obj>("POST", `prices/${existing.id}`, { tax_behavior: "exclusive" });
+        created.push(`price ${existing.id} set to before-tax`);
+        return existing.id;
+      }
+    }
     const p = await call<Obj>("POST", "prices", {
       product: product.id,
       currency: "usd",
       unit_amount: cents,
       "recurring[interval]": "month",
+      tax_behavior: "exclusive",
       lookup_key: lookupKey,
       transfer_lookup_key: existing ? "true" : undefined,
       nickname,
@@ -129,5 +141,14 @@ export async function setupStripe(fetch: Fetch, secretKey: string, o: StripeSetu
     webhook = { id: hook.id, secret: null, created: false };
   }
 
-  return { live: secretKey.startsWith("sk_live_") || secretKey.startsWith("rk_live_"), productId: product.id, pricePlus, priceExtraTeen, portalConfiguration: portal.id, webhook, created };
+  // Checkout has automatic tax on, which Stripe refuses until Stripe Tax is
+  // set up (head office address and defaults) in the same mode.
+  let taxReady: boolean | null;
+  try {
+    taxReady = (await call<{ status?: string }>("GET", "tax/settings")).status === "active";
+  } catch {
+    taxReady = null;
+  }
+
+  return { live: secretKey.startsWith("sk_live_") || secretKey.startsWith("rk_live_"), productId: product.id, pricePlus, priceExtraTeen, portalConfiguration: portal.id, webhook, created, taxReady };
 }

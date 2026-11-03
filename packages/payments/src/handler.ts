@@ -85,6 +85,8 @@ async function checkout(req: Request, env: Record<string, string | undefined>, d
     customerId: await deps.customerFor(parent.id),
     successUrl: `${site}/?plus=started`,
     cancelUrl: `${site}/`,
+    // On unless switched off: STRIPE_AUTOMATIC_TAX=off (docs/payments-setup.md).
+    automaticTax: env.STRIPE_AUTOMATIC_TAX !== "off",
   });
   return json({ url });
 }

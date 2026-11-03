@@ -23,10 +23,21 @@ end against a staging project, then switch to live.
 - **Public details:** use "QUEST PLUS" as the statement descriptor, so it's
   what parents see on their card statement. Add a support email, and use the
   parent site as the website.
-- **Tax:** decide with your accountant whether to collect sales tax (US
-  states) and GST/HST (Canada) on the subscription. If yes, turn on Stripe
-  Tax and add your registrations, then tell me and I'll switch checkout to
-  automatic tax. It's off for now.
+- **Tax (Stripe Tax is on in checkout):** prices are before tax, and Stripe
+  adds US sales tax or Canadian GST/HST from the parent's address. It
+  collects only where you've added a registration; elsewhere it charges no
+  tax, and the Tax page shows where you're nearing a threshold. In Settings
+  → Tax, in **both** test and live mode:
+  - add the head office address;
+  - set the default product tax code your accountant advises, typically a
+    digital or electronically supplied service;
+  - add registrations where you must collect.
+
+  Until Stripe Tax is set up in a mode, Stripe refuses checkout in that
+  mode. `npm run setup:stripe` warns you if it isn't. In an emergency,
+  `STRIPE_AUTOMATIC_TAX=off` in the function's secrets turns it off.
+  Plus bought in the app needs none of this: Apple and Google collect and
+  pay the tax themselves.
 - **Currency:** prices are in US dollars. Canadian parents pay in USD unless
   you turn on Adaptive Pricing in Stripe, which shows local prices.
 
@@ -62,6 +73,8 @@ card `4242 4242 4242 4242` (any future date, any CVC). Then check:
 
 - Plus shows as on in the parent page, and in the teen's Settings.
 - A second teen on the same parent account is charged $3.99.
+- Checkout asks for the parent's address and shows tax for an address where
+  you've added a test-mode registration.
 - "Manage or cancel" opens Stripe's page. Cancelling keeps Plus to the end of
   the month.
 - A refund (in Stripe, cancel the subscription immediately with a refund)

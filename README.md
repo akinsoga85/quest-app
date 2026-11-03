@@ -114,8 +114,10 @@ applied once.
 Setting up Stripe and RevenueCat (needs your accounts): `docs/payments-setup.md`.
 `npm run setup:stripe` creates the product, both prices, the manage page
 settings and the webhook. A second teen on the same parent account pays the
-extra-teen price. For a refund on the web, cancel the subscription immediately
-with a refund, so Plus ends at once.
+extra-teen price. Prices are before tax: checkout works out sales tax or
+GST/HST with Stripe Tax, which must be set up in Stripe first. For a refund on
+the web, cancel the subscription immediately with a refund, so Plus ends at
+once.
 
 ## The parent page (A8)
 
