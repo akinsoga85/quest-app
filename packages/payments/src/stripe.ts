@@ -65,9 +65,10 @@ export function createCheckout(fetch: Fetch, secretKey: string, p: CheckoutParam
   });
 }
 
-// Stripe's own page to change the card, see receipts or cancel.
-export function createPortal(fetch: Fetch, secretKey: string, customerId: string, returnUrl: string): Promise<{ url: string }> {
-  return stripePost(fetch, secretKey, "billing_portal/sessions", { customer: customerId, return_url: returnUrl });
+// Stripe's own page to change the card, see receipts or cancel. With no
+// configuration, Stripe uses the account's default one from the dashboard.
+export function createPortal(fetch: Fetch, secretKey: string, customerId: string, returnUrl: string, configuration?: string): Promise<{ url: string }> {
+  return stripePost(fetch, secretKey, "billing_portal/sessions", { customer: customerId, return_url: returnUrl, configuration });
 }
 
 const LIVE = new Set(["active", "trialing", "past_due", "unpaid", "incomplete"]);

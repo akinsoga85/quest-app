@@ -5,7 +5,7 @@ import { cancelSubscriptionsFor, formEncode, verifyStripeSignature, type Fetch }
 
 const TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a11";
 const OTHER_TEEN = "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6a12";
-const PARENT: Parent = { id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6aaa", email: "mom@example.com", teenIds: [TEEN], includedTeenIds: [] };
+const PARENT: Parent = { id: "8c6f1f5e-7f1d-4c2a-9a39-1c1b2f0b6aaa", email: "mom@example.com", teenIds: [TEEN], includedTeenIds: [], webPlusTeenIds: [] };
 const NOW = Date.UTC(2026, 10, 1, 12);
 const env = {
   STRIPE_WEBHOOK_SECRET: "whsec_test",
@@ -119,6 +119,26 @@ describe("checkout and the manage page", () => {
     const d = deps({ parentFromJwt: async (jwt) => (jwt === "parent-jwt" ? { ...PARENT, includedTeenIds: [TEEN] } : null) });
     expect((await handlePayments(post("/checkout", JSON.stringify({ teenId: TEEN }), { authorization: "Bearer parent-jwt" }), env, d)).status).toBe(409);
     expect(d.calls).toHaveLength(0);
+  });
+
+  it("charges the extra-teen price for each teen after the first a parent pays for", async () => {
+    const both = { ...PARENT, teenIds: [TEEN, OTHER_TEEN] };
+    const withExtra = { ...env, STRIPE_PRICE_PLUS_EXTRA: "price_extra" };
+    const priceFor = async (parent: Parent, e: Record<string, string>) => {
+      const d = deps({ parentFromJwt: async () => parent });
+      await handlePayments(post("/checkout", JSON.stringify({ teenId: OTHER_TEEN }), { authorization: "Bearer parent-jwt" }), e, d);
+      return new URLSearchParams(d.calls[0]!.body).get("line_items[0][price]");
+    };
+    expect(await priceFor(both, withExtra)).toBe("price_plus"); // the first teen
+    expect(await priceFor({ ...both, webPlusTeenIds: [TEEN] }, withExtra)).toBe("price_extra");
+    expect(await priceFor({ ...both, webPlusTeenIds: [OTHER_TEEN] }, withExtra)).toBe("price_plus"); // renewing the same teen
+    expect(await priceFor({ ...both, webPlusTeenIds: [TEEN] }, env)).toBe("price_plus"); // no extra price set up
+  });
+
+  it("opens the manage page with the Plus portal settings when they're set", async () => {
+    const d = deps({ customerFor: async () => "cus_123" });
+    await handlePayments(post("/portal", "{}", { authorization: "Bearer parent-jwt" }), { ...env, STRIPE_PORTAL_CONFIGURATION: "bpc_1" }, d);
+    expect(new URLSearchParams(d.calls[0]!.body).get("configuration")).toBe("bpc_1");
   });
 
   it("says when payments aren't set up", async () => {
