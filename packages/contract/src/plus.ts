@@ -14,6 +14,10 @@ import type { AgeBracket } from "./age";
 export const PLUS = {
   monthlyUsd: 7.99,
   extraTeenUsd: 3.99,
+  // Fixed Canadian prices: Stripe's checkout shows them to parents in Canada.
+  // Set them in the App Store and Google Play for Canada too (docs/payments-setup.md).
+  monthlyCad: 10.99,
+  extraTeenCad: 5.49,
   perks: [
     "Deeper coaching and a second take after a redo",
     "A printed postcard every month they level up (when prints launch)",

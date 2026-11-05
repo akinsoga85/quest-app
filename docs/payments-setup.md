@@ -38,34 +38,24 @@ end against a staging project, then switch to live.
   `STRIPE_AUTOMATIC_TAX=off` in the function's secrets turns it off.
   Plus bought in the app needs none of this: Apple and Google collect and
   pay the tax themselves.
-- **Currency, and Adaptive Pricing for Canadian parents:** prices are set in
-  US dollars. Adaptive Pricing shows parents outside the US the price in their
-  own currency at checkout, so Canadians see Canadian dollars. Nothing in the
-  code changes; it's set in Stripe:
-  1. **Ask Stripe for access.** For subscriptions, Adaptive Pricing is a beta
-     that Stripe turns on per account. Ask your Stripe account team, or the
-     Adaptive Pricing beta contact on Stripe's support page.
-  2. **Turn it on.** Once you have access, go to Settings → Payments →
-     Adaptive Pricing, in test mode first and then live. It applies to new
-     subscriptions from that point; existing ones stay in US dollars.
+- **Currency: fixed prices in US and Canadian dollars.** Each Plus price has
+  a US amount ($7.99, and $3.99 for each extra teen) and a fixed Canadian
+  amount (CA$10.99, and CA$5.49). Stripe's checkout shows parents in Canada
+  the Canadian price, based on where they are.
+  - The Canadian price stays the same every month, and parents pay no
+    currency conversion fee.
+  - Stripe Tax adds GST/HST in Canadian dollars.
+  - The parent page lists both prices.
 
-  What parents see and pay:
-  - The Canadian-dollar price follows the exchange rate at each monthly
-    renewal, so it can change a little from month to month.
-  - Stripe adds a currency conversion fee to the parent's price.
-  - Your payouts, Stripe Tax reports and the prices in this repo stay in US
-    dollars.
-  - The parent page still shows $7.99 (US) until checkout.
-
-  If you'd rather have a fixed Canadian price, such as CA$10.99 every month
-  with no conversion fee, that works without the beta: the prices get a
-  Canadian-dollar amount alongside the US one. Ask, and it's a small change
-  to `npm run setup:stripe`.
+  The amounts are in `PLUS` in `packages/contract/src/plus.ts`. To change
+  one, edit it there and run `npm run setup:stripe` again: new subscribers
+  get the new price, and existing ones keep theirs. Leave Stripe's Adaptive
+  Pricing off: the fixed Canadian prices replace it.
 
 ### 2. Run the setup (your computer)
 
 It creates the product, the two monthly prices from the contract ($7.99, and
-$3.99 for each extra teen), the manage page settings (cancel at the end of
+$3.99 for each extra teen, each with its Canadian price), the manage page settings (cancel at the end of
 the month, change card, receipts), and the webhook to the payments function.
 Running it again only fills in what's missing.
 
@@ -100,8 +90,8 @@ card `4242 4242 4242 4242` (any future date, any CVC). Then check:
   the month.
 - A refund (in Stripe, cancel the subscription immediately with a refund)
   stops Plus at once.
-- With Adaptive Pricing on: a checkout from a Canadian address (or Stripe's
-  test location tools) shows Canadian dollars.
+- A checkout opened from Canada (or through a Canadian VPN) shows CA$10.99,
+  and CA$5.49 for a second teen.
 - A 13–15 is never offered Plus to buy.
 
 ## RevenueCat (the app)
@@ -113,14 +103,16 @@ card `4242 4242 4242 4242` (any future date, any CVC). Then check:
   - Then Subscriptions: a group "Plus" with one auto-renewing subscription.
     Product ID `quest_plus_monthly`, 1 month, $7.99, display name "Quest
     Plus", a short description, and a review screenshot of the app's Plus
-    screen.
+    screen. Under the subscription's prices, set Canada to CA$10.99 so it
+    matches the parent page (Apple suggests a converted price otherwise).
   - Leave Family Sharing off, so one teen's Plus isn't shared across their
     Apple family.
 - **Google Play Console:**
   - Set up a payments profile.
   - After a first build is uploaded to internal testing, go to Monetize →
     Subscriptions. Create subscription `quest_plus` with an auto-renewing
-    base plan `monthly` at $7.99, and activate it.
+    base plan `monthly` at $7.99, set Canada's price to CA$10.99, and
+    activate it.
 
 ### 2. RevenueCat (you, in the RevenueCat dashboard)
 
