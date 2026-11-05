@@ -7,7 +7,9 @@ import { formEncode, type Fetch } from "./stripe";
 // Safe to run again: it finds what's there by lookup key or metadata and only
 // creates what's missing. Prices come from PLUS in the contract, the same
 // numbers the parent page shows; change them there and run it again (new
-// subscribers get the new price, existing ones keep theirs). Prices are
+// subscribers get the new price, existing ones keep theirs). Each price has
+// a fixed Canadian-dollar amount too, which Checkout shows parents in Canada.
+// Prices are
 // before tax ("exclusive"): Stripe Tax adds sales tax or GST/HST at checkout
 // where the account is registered to collect it.
 
@@ -65,40 +67,59 @@ export async function setupStripe(fetch: Fetch, secretKey: string, o: StripeSetu
 
   // The two monthly prices, found by lookup key. A changed amount makes a new
   // price that takes over the lookup key.
-  const prices = await call<{ data: (Obj & { lookup_key: string; unit_amount: number; currency: string; tax_behavior?: string })[] }>("GET", "prices", {
+  type StripePrice = Obj & {
+    lookup_key: string;
+    unit_amount: number;
+    currency: string;
+    tax_behavior?: string;
+    currency_options?: Record<string, { unit_amount: number; tax_behavior?: string }>;
+  };
+  const prices = await call<{ data: StripePrice[] }>("GET", "prices", {
     "lookup_keys[0]": STRIPE_LOOKUP.plus,
     "lookup_keys[1]": STRIPE_LOOKUP.extraTeen,
     active: "true",
     limit: 10,
+    "expand[0]": "data.currency_options", // Stripe leaves these out unless asked
   });
-  const price = async (lookupKey: string, usd: number, nickname: string): Promise<string> => {
+  const cadOption = (cad: number) => ({ "currency_options[cad][unit_amount]": Math.round(cad * 100), "currency_options[cad][tax_behavior]": "exclusive" });
+  const price = async (lookupKey: string, usd: number, cad: number, nickname: string): Promise<string> => {
     const cents = Math.round(usd * 100);
+    const cadCents = Math.round(cad * 100);
     const existing = prices.data.find((p) => p.lookup_key === lookupKey);
-    if (existing && existing.unit_amount === cents && existing.currency === "usd") {
-      if (existing.tax_behavior === "exclusive") return existing.id;
-      // Stripe lets an unspecified tax behaviour be set once; anything else needs a new price.
-      if (!existing.tax_behavior || existing.tax_behavior === "unspecified") {
-        await call<Obj>("POST", `prices/${existing.id}`, { tax_behavior: "exclusive" });
-        created.push(`price ${existing.id} set to before-tax`);
-        return existing.id;
-      }
+    const cadNow = existing?.currency_options?.cad;
+    // Reuse a price whose US amount matches and whose Canadian amount matches
+    // or is missing (adding it touches no one: nobody pays it in CAD yet).
+    // Stripe lets an unspecified tax behaviour be set once.
+    const taxOk = !existing?.tax_behavior || existing.tax_behavior === "unspecified" || existing.tax_behavior === "exclusive";
+    if (existing && existing.unit_amount === cents && existing.currency === "usd" && taxOk && (!cadNow || cadNow.unit_amount === cadCents)) {
+      const update: Record<string, string | number> = {};
+      if (existing.tax_behavior !== "exclusive") update.tax_behavior = "exclusive";
+      if (!cadNow) Object.assign(update, cadOption(cad));
+      if (Object.keys(update).length === 0) return existing.id;
+      await call<Obj>("POST", `prices/${existing.id}`, update);
+      const what = [update.tax_behavior ? "before-tax" : null, cadNow ? null : `CA$${cad}`].filter(Boolean).join(", ");
+      created.push(`price ${existing.id} updated (${what})`);
+      return existing.id;
     }
+    // A changed amount (US or Canadian) makes a new price that takes over the
+    // lookup key, so existing subscribers keep what they signed up for.
     const p = await call<Obj>("POST", "prices", {
       product: product.id,
       currency: "usd",
       unit_amount: cents,
       "recurring[interval]": "month",
       tax_behavior: "exclusive",
+      ...cadOption(cad),
       lookup_key: lookupKey,
       transfer_lookup_key: existing ? "true" : undefined,
       nickname,
       "metadata[quest]": TAG,
     });
-    created.push(`price ${p.id} (${nickname}, $${usd})`);
+    created.push(`price ${p.id} (${nickname}, $${usd} / CA$${cad})`);
     return p.id;
   };
-  const pricePlus = await price(STRIPE_LOOKUP.plus, PLUS.monthlyUsd, "Plus, monthly");
-  const priceExtraTeen = await price(STRIPE_LOOKUP.extraTeen, PLUS.extraTeenUsd, "Plus, each extra teen, monthly");
+  const pricePlus = await price(STRIPE_LOOKUP.plus, PLUS.monthlyUsd, PLUS.monthlyCad, "Plus, monthly");
+  const priceExtraTeen = await price(STRIPE_LOOKUP.extraTeen, PLUS.extraTeenUsd, PLUS.extraTeenCad, "Plus, each extra teen, monthly");
 
   // The customer portal parents use to change their card, see receipts or
   // cancel (at the end of the month they've paid for).
