@@ -11,6 +11,8 @@ export default tseslint.config(
       "**/dist-check/**",
       "packages/contract/src/database.types.ts",
       "supabase/functions/**/*.bundle.mjs",
+      // Vendored Claude Code skills (third-party, not app code).
+      ".claude/**",
     ],
   },
   js.configs.recommended,
