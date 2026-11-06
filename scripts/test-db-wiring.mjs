@@ -4,7 +4,10 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import pg from "pg";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const url = process.env.DATABASE_URL ?? "postgres://postgres@127.0.0.1:54329/quest";
 const db = new pg.Client({ connectionString: url });
@@ -94,4 +97,28 @@ test("every edge function is deployed by the setup script and has its CLI settin
   const wiring = readFileSync(new URL("../supabase/migrations/20261114120100_production_wiring.sql", import.meta.url), "utf8");
   const vault = readFileSync(new URL("../supabase/setup/vault.sql", import.meta.url), "utf8");
   for (const [, name] of wiring.matchAll(/'([a-z]+_secret)'/g)) assert.match(vault, new RegExp(`'${name}', :'${name}'`), name);
+});
+
+test("the test safety vendors are refused anywhere but staging, before anything runs", () => {
+  const dir = mkdtempSync(join(tmpdir(), "quest-env-"));
+  const env = (name, lines) => {
+    const p = join(dir, name);
+    writeFileSync(p, lines.join("\n") + "\n");
+    return p;
+  };
+  const run = (script, extra) =>
+    spawnSync("bash", [new URL(`./${script}`, import.meta.url).pathname], { encoding: "utf8", env: { ...process.env, PROJECT_REF: "abcdefghijklmnopqrst", DB_URL: "", PRODUCTION_DB_URL: "", ...extra } });
+
+  const prod = run("setup-production.sh", { ENV_FILE: env(".env.production", ["SAFETY_VENDORS=test"]) });
+  assert.equal(prod.status, 1);
+  assert.match(prod.stderr, /SAFETY_VENDORS=test is for staging only/);
+
+  // In a staging file it's allowed: the script gets as far as asking for the database.
+  const staging = run("setup-production.sh", { ENV_FILE: env(".env.staging", ["SAFETY_VENDORS=test"]) });
+  assert.equal(staging.status, 1);
+  assert.match(staging.stderr, /Set DB_URL/);
+
+  // setup-staging.sh uses the staging file (missing in a fresh checkout).
+  const fresh = spawnSync("bash", [new URL("./setup-staging.sh", import.meta.url).pathname], { encoding: "utf8", env: { ...process.env, PROJECT_REF: "abcdefghijklmnopqrst" } });
+  assert.match(fresh.stderr, /Copy supabase\/\.env\.staging\.example to supabase\/\.env\.staging/);
 });

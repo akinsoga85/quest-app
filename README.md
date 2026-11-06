@@ -44,10 +44,11 @@ npm run start -w @quest/mobile   # Expo dev server (needs a development build, s
 ```
 
 To connect the app to Supabase, copy `apps/mobile/.env.example` to `.env` and fill
-in the project URL, anon key and parent site URL. To set up the production
-Supabase project (schema, functions, secrets, schedules), follow
-`docs/production-setup.md`: one script, `scripts/setup-production.sh`, plus a
-few dashboard steps.
+in the project URL, anon key and parent site URL. To set up a Supabase
+project (schema, functions, secrets, schedules), follow
+`docs/production-setup.md`: one script plus a few dashboard steps.
+`scripts/setup-staging.sh` sets up the staging project for the MVP, and
+`scripts/setup-production.sh` the production one.
 
 The app uses native modules (store age signals, Sign in with Apple), so run it in a
 [development build](https://docs.expo.dev/develop/development-builds/introduction/)
