@@ -8,6 +8,62 @@ first time.
 Use a separate project for production. Test against a second "staging"
 project set up the same way, never against production.
 
+## Staging: the MVP on your team's phones
+
+Staging is where the MVP runs before launch, with staff and test accounts
+only. It's set up like production (sections 1–4 below) with these
+differences:
+
+1. **Create the project.** Free plan is fine: a free project pauses after a
+   week without use, and you restore it from the dashboard. Name it
+   `quest-staging`, in the same region you'll use for production.
+2. **Fill in the staging secrets and run the staging script:**
+
+   ```sh
+   cp supabase/.env.staging.example supabase/.env.staging
+   # Fill in the five *_WEBHOOK_SECRET values (openssl rand -hex 32, different
+   # from production's) and ANTHROPIC_API_KEY. SAFETY_VENDORS=test is already set.
+
+   PROJECT_REF=<staging project id> DB_URL='<staging session pooler string>' \
+   scripts/setup-staging.sh
+   ```
+
+   - **Test safety vendors:** `SAFETY_VENDORS=test` lets photos reach the
+     coach before real safety vendors are chosen. It passes every photo except
+     known test images, so use it only with staff photos, never real teens.
+     `setup-production.sh` refuses it for any project but staging.
+   - **Payments** stay empty: Plus isn't part of the MVP.
+3. **Quests for today.** Approved weeks start on a Monday, so to have quests
+   straight away, load the test quests once. They cover yesterday, today and
+   tomorrow:
+
+   ```sh
+   psql "$DB_URL" -f supabase/seed.sql   # staging only, once
+   ```
+
+   For the weeks after, run the quest writer now rather than waiting for
+   Monday, then approve the drafts in the admin site. Each run makes a few
+   paid Claude calls.
+
+   ```sh
+   curl -X POST https://<staging project id>.supabase.co/functions/v1/quest-writer \
+     -H "x-quests-secret: <QUESTS_WEBHOOK_SECRET from supabase/.env.staging>"
+   ```
+4. **Sign-in** (section 3): the redirect URL `quest://auth/callback` and at
+   least one provider. Google is quickest, and works on both platforms
+   through the browser. Apple needs your Apple Developer account. For
+   parents' emailed links, Supabase's built-in sender is fine at staging
+   volumes.
+5. **You as staff** (section 4). Run the admin site locally: put the staging
+   URL and anon key in `apps/admin/.env`, then `npm run dev -w @quest/admin`.
+6. **Check it:** paste `supabase/setup/check.sql` into the SQL Editor and
+   run it. It lists 11 checks with true or false: migrations, zones, the
+   photo bucket, the schedules and their recent runs, Vault, access rules,
+   staff and today's quests. It changes nothing and shows no secret values.
+7. **The app:** put the staging URL and anon key in `apps/mobile/.env`
+   (or the EAS `development` and `preview` environments) and install a
+   development build (`docs/store-release.md`, section 2).
+
 ## 1. Create the project (dashboard)
 
 1. At supabase.com, create an organisation for the company if there isn't one,
@@ -39,7 +95,7 @@ cp supabase/.env.production.example supabase/.env.production
 # Leave a value empty if that part isn't set up yet (Stripe, safety vendors…).
 
 PROJECT_REF=<project id> \
-PRODUCTION_DB_URL='<session pooler connection string>' \
+DB_URL='<session pooler connection string>' \
 scripts/setup-production.sh
 ```
 

@@ -12,4 +12,5 @@ ios/
 android/
 supabase/functions/*/*.bundle.mjs
 supabase/.env.production
+supabase/.env.staging
 supabase/.temp/
