@@ -82,10 +82,11 @@ begin
   end if;
 
   -- 9. Every table the app can reach has row-level security on.
-  select string_agg(c.relname, ', ' order by c.relname) into v
+  select string_agg(c.relname, ', ' order by c.relname) filter (where not c.relrowsecurity), count(*) into v, i
   from pg_class c join pg_namespace s on s.oid = c.relnamespace
-  where s.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
-  insert into quest_check values (9, 'row-level security', v is null, coalesce('OFF on: ' || v, 'on for every public table'));
+  where s.nspname = 'public' and c.relkind = 'r';
+  insert into quest_check values (9, 'row-level security', v is null and i > 0,
+    case when i = 0 then 'no tables yet: migrations not applied' else coalesce('OFF on: ' || v, format('on for all %s public tables', i)) end);
 
   -- 10. At least one staff member, for the admin site.
   if to_regclass('public.staff') is null then
