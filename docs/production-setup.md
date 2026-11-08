@@ -56,7 +56,11 @@ differences:
    volumes.
 5. **You as staff** (section 4). Run the admin site locally: put the staging
    URL and anon key in `apps/admin/.env`, then `npm run dev -w @quest/admin`.
-6. **The app:** put the staging URL and anon key in `apps/mobile/.env`
+6. **Check it:** paste `supabase/setup/check.sql` into the SQL Editor and
+   run it. It lists 11 checks with true or false: migrations, zones, the
+   photo bucket, the schedules and their recent runs, Vault, access rules,
+   staff and today's quests. It changes nothing and shows no secret values.
+7. **The app:** put the staging URL and anon key in `apps/mobile/.env`
    (or the EAS `development` and `preview` environments) and install a
    development build (`docs/store-release.md`, section 2).
 

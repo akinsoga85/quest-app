@@ -122,3 +122,14 @@ test("the test safety vendors are refused anywhere but staging, before anything 
   const fresh = spawnSync("bash", [new URL("./setup-staging.sh", import.meta.url).pathname], { encoding: "utf8", env: { ...process.env, PROJECT_REF: "abcdefghijklmnopqrst" } });
   assert.match(fresh.stderr, /Copy supabase\/\.env\.staging\.example to supabase\/\.env\.staging/);
 });
+
+test("the SQL Editor health check runs on any database and answers every check", () => {
+  const r = spawnSync("psql", [url, "-v", "ON_ERROR_STOP=1", "-q", "-A", "-t", "-F", "|", "-f", new URL("../supabase/setup/check.sql", import.meta.url).pathname], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  const rows = r.stdout.trim().split("\n").map((l) => l.split("|"));
+  assert.equal(rows.length, 11);
+  for (const [name, ok] of rows) assert.match(ok, /^[tf]$/, `${name} must be true or false`);
+  // On this plain Postgres: data and access rules are fine; the Supabase-only parts are reported missing.
+  const ok = Object.fromEntries(rows.map(([name, v]) => [name, v === "t"]));
+  assert.deepEqual([ok["zones and skills"], ok["row-level security"], ok["schedules"], ok["Vault secrets"]], [true, true, false, false]);
+});
